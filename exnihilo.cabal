@@ -24,7 +24,14 @@ source-repository head
 
 library
   exposed-modules:
-      Exnihilo.Parser
+      Exnihilo.App
+      Exnihilo.Env
+      Exnihilo.Error
+      Exnihilo.Parameters
+      Exnihilo.SafeIO
+      Exnihilo.Schema
+      Exnihilo.Template
+      Exnihilo.Variables
   other-modules:
       Paths_exnihilo
   hs-source-dirs:
