@@ -53,9 +53,24 @@ safeWriteFile fp content  = do
       | isPermissionError   e = ErrorFileRead $ mconcat ["Cannot write file \"", T.pack fp, "\". Permission denied."]
       | otherwise             = ErrorOther    $ mconcat ["Unknown error while writing file \"", T.pack fp, "\"."]
 
--- TODO add error handling
-safeMakeDir :: MonadIO m => FilePath -> m ()
-safeMakeDir = liftIO . createDirectoryIfMissing True
+safeMakeDir :: (MonadIO m, MonadError Error m) => FilePath -> m ()
+safeMakeDir fp = do
+  res <- liftIO tryMakeDir
+  case res of
+    Left e  -> throwError e
+    Right v -> pure v
+  where
+    tryMakeDir :: IO (Either Error ())
+    tryMakeDir = do
+      res <- try $ createDirectoryIfMissing True  fp
+      pure $ case res of
+        Right v -> Right v
+        Left e  -> Left $ handler e
+    handler e
+      | isPermissionError e   = ErrorFileRead $ mconcat ["Cannot create directory \"", T.pack fp, "\". Permission denied."]
+      | isDoesNotExistError e = ErrorFileRead $ mconcat ["Cannot create directory \"", T.pack fp, "\". Path does not exist."]
+      | isFullError e         = ErrorFileRead $ mconcat ["Cannot create directory \"", T.pack fp, "\". Insufficient resources (virtual memory, process file descriptors, physical disk space, etc.)."]
+      | otherwise             = ErrorOther    $ mconcat ["Unknown error while creating directory \"", T.pack fp, "\"."]
 
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
 safeDecodeYamlFile fp = do
