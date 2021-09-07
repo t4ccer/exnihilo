@@ -1,0 +1,4 @@
+:set prompt "exnihilo> "
+:set -XOverloadedStrings
+:set -XTypeApplications
+:set -XFlexibleContexts
