@@ -9,17 +9,31 @@ import           Options.Applicative
 
 -- TODO add template url
 -- TODO add template github repo
--- TODO add version param
 data Parameters = Parameters
   { paramVariableFile :: FilePath
   , paramTemplateFile :: FilePath
   , paramSaveLocation :: FilePath
   }
 
-getParams :: (MonadIO m) => m Parameters
-getParams = liftIO $ execParser $ info (helper <*> opts) fullDesc
+newtype VersionParameters = VersionParameters
+  { paramVersionNumeric :: Bool
+  }
+
+data Mode
+ = ModeVersion VersionParameters
+ | ModeCreate Parameters
+
+getParams :: (MonadIO m) => m Mode
+getParams = liftIO $ customExecParser (prefs showHelpOnError) $ info (helper <*> opts) fullDesc
   where
-    opts = do
+    opts = hsubparser $ mconcat
+      [ command "version" (info (ModeVersion <$> versionOpts) (progDesc "Print version and exit"))
+      , command "create"  (info (ModeCreate  <$> createOpts)  (progDesc "Create project from schema"))
+      ]
+    versionOpts = do
+      paramVersionNumeric <- switch (long "numeric" <> help "Print only version number")
+      pure VersionParameters{..}
+    createOpts = do
       paramVariableFile <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
       paramTemplateFile <- strOption (short 's' <> long "schema"      <> metavar "PATH" <> help "Path to schema file")
       paramSaveLocation <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
