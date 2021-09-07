@@ -49,6 +49,5 @@ varP = string "{{" *> (pure . TemplateVariable . T.strip . T.pack <$> many (anyS
 wsP :: Parser String
 wsP = many (char ' ')
 
--- TODO optimize it
 textP :: Parser [Template]
 textP = pure . TemplateConstant . T.pack <$> some (anySingleBut '{')
