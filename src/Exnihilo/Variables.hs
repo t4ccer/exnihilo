@@ -3,31 +3,38 @@
 
 module Exnihilo.Variables where
 
-import           Control.Monad.Except
-import           Data.Map             (Map)
-import qualified Data.Map             as M
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-
-import           Exnihilo.Error
-import           Exnihilo.SafeIO
+import           Data.Aeson.Types
+import           Data.Bifunctor
+import qualified Data.HashMap.Strict as HM
+import           Data.Map            (Map)
+import qualified Data.Map            as M
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 
 newtype Variables = Variables {getVariables :: Map Text Text}
+
+instance FromJSON Variables where
+  parseJSON = withObject "Variables" $ \obj -> do
+    let yamlDict = HM.toList obj
+        strLst = map (second getText) yamlDict
+        wrongEntry = bimap T.unpack getType $ head $ filter (not . isText . snd) yamlDict
+    if all (isText . snd) yamlDict
+      then pure $ Variables $ M.fromList strLst
+      else parseFail ("Variable can be only number or string. Variable \"" <> fst wrongEntry <> "\" is type of " <> snd wrongEntry <> ".")
+    where
+      isText (String _) = True
+      isText (Number _) = True
+      isText _          = False
+      getText (String s) = s
+      getText (Number n) = T.pack $ show n
+      getText _          = undefined -- Safe when used with check
+      getType (String _) = "string"
+      getType (Object _) = "object"
+      getType (Array _)  = "array"
+      getType (Number _) = "number"
+      getType (Bool _)   = "bool"
+      getType Null       = "null"
 
 lookupVariable :: Variables -> Text -> Maybe Text
 lookupVariable (Variables vars) key = M.lookup key vars
 
--- TODO make it efficient, add errors, switch to yaml
-varsFromLine :: forall m. Monad m => Text -> m (Text, Text)
-varsFromLine = go mempty
-  where
-    go :: Text -> Text -> m (Text, Text)
-    go acc inp = if T.head inp == '='
-      then pure (acc, T.tail inp)
-      else go (acc <> T.singleton (T.head inp)) (T.tail inp)
-
-varsFromFile :: (MonadIO m, MonadError Error m) => FilePath -> m Variables
-varsFromFile fp = do
-  content <- safeReadFile fp
-  vars <- mapM varsFromLine $ T.lines content
-  pure $ Variables $ M.fromList vars

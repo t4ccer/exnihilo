@@ -10,7 +10,6 @@ import           Exnihilo.Error
 import           Exnihilo.Parameters
 import           Exnihilo.SafeIO
 import           Exnihilo.Schema
-import           Exnihilo.Variables
 
 run :: (MonadIO m) => Env -> m ()
 run env = runApp env $
@@ -23,7 +22,7 @@ run env = runApp env $
 runInit :: (MonadIO m) => m (Either Error Env)
 runInit = runExceptT $ do
   params <- getParams
-  vars   <- varsFromFile $ paramVariableFile params
+  vars   <- safeDecodeYamlFile $ paramVariableFile params
   pure $ Env vars params
 
 main :: IO ()

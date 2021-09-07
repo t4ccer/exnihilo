@@ -15,6 +15,7 @@ dependencies:
 - base >= 4.10.0 && < 5
 - optparse-applicative
 - containers
+- unordered-containers
 - transformers
 - mtl
 - text
@@ -24,6 +25,7 @@ dependencies:
 - directory
 - filepath
 - yaml
+- aeson
 
 library:
   source-dirs: src
