@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+-- {-# OPTIONS_GHC -Wno-deferred-type-errors #-}
 
 module Exnihilo.Template where
 
@@ -8,18 +10,23 @@ import           Control.Monad.Except
 import           Control.Monad.Reader.Has
 import           Data.Text                (Text)
 import qualified Data.Text                as T
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 import           Exnihilo.Error
 import           Exnihilo.Variables
 
+type Parser a = Parsec Void Text a
+
+-- TODO add AST, etc
 data Template
   = TemplateVariable Text
   | TemplateConstant Text
   deriving (Show)
 
--- TODO add variable support
-parseTemplate :: Monad m => Text -> m [Template]
-parseTemplate = pure . pure . TemplateConstant
+parseTemplate :: MonadError Error m => Text -> m [Template]
+parseTemplate = maybe (throwError $ ErrorTemplateParse "") pure . parseMaybe templateP
 
 renderTemplate :: forall m r. (MonadReader r m, Has Variables r, MonadError Error m) => [Template] -> m Text
 renderTemplate templ = do
@@ -32,3 +39,16 @@ renderTemplate templ = do
          Just v  -> pure v
        (TemplateConstant cons) -> pure cons
   T.concat <$> traverse go templ
+
+templateP :: Parser [Template]
+templateP = fmap concat $ many $ choice [try varP, try textP]
+
+varP :: Parser [Template]
+varP = string "{{" *> (pure . TemplateVariable . T.strip . T.pack <$> many (anySingleBut '}')) <* wsP <* string "}}"
+
+wsP :: Parser String
+wsP = many (char ' ')
+
+-- TODO optimize it
+textP :: Parser [Template]
+textP = pure . TemplateConstant . T.pack <$> some (anySingleBut '{')

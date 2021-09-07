@@ -26,6 +26,7 @@ dependencies:
 - filepath
 - yaml
 - aeson
+- megaparsec
 
 library:
   source-dirs: src

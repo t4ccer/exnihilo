@@ -1,8 +1,8 @@
 directory: "."
 files:
   - file: "foo.txt"
-    content: "foo"
+    content: "I am author: {{ author }}"
   - directory: "bar"
     files:
       - file: "bar.txt"
-        content: "bar"
+        content: "I do not exist: {{ foobar }}"

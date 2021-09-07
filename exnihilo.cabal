@@ -45,6 +45,7 @@ library
     , data-default
     , directory
     , filepath
+    , megaparsec
     , mtl
     , optparse-applicative
     , text
@@ -70,6 +71,7 @@ executable exnihilo-exe
     , directory
     , exnihilo
     , filepath
+    , megaparsec
     , mtl
     , optparse-applicative
     , text
