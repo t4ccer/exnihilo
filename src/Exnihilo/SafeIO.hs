@@ -61,5 +61,5 @@ safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath ->
 safeDecodeYamlFile fp = do
   res <- liftIO $ decodeFileEither fp
   case res of
-    Left e  -> throwError $ ErrorFileRead $ T.pack $ fmap (\c -> if c == '\n' then ' ' else c) $ prettyPrintParseException e
+    Left e  -> throwError $ ErrorFileRead $ T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
     Right v -> pure v
