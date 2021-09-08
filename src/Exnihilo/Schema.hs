@@ -1,9 +1,11 @@
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Exnihilo.Schema where
 
@@ -25,11 +27,17 @@ import           Exnihilo.SafeIO
 import           Exnihilo.Template
 import           Exnihilo.Variables
 
--- TODO add type-safe wrappers for raw schema, template schema, and rendered schema
 data Schema a
   = Directory a [Schema a]
   | File      a a
   deriving (Show, Functor)
+
+newtype RawSchema = RawSchema (Schema Text)
+  deriving newtype FromJSON
+
+newtype TemplateSchema = TemplateSchema (Schema [Template])
+
+newtype RenderedSchema = RenderedSchem (Schema Text)
 
 instance FromJSON (Schema Text) where
   parseJSON x = parseDir x <|> parseFile x
@@ -55,17 +63,17 @@ traverseSchema f fs = do
       files' <- traverse (traverseSchema f) files
       pure $ Directory dirName' files'
 
-parseTemplateSchema :: MonadError Error m => Schema Text -> m (Schema [Template])
-parseTemplateSchema = traverseSchema parseTemplate
+parseRawSchema :: MonadError Error m => RawSchema -> m TemplateSchema
+parseRawSchema (RawSchema schema) = TemplateSchema <$> traverseSchema parseTemplate schema
 
-renderTemplateSchema :: (MonadError Error m, MonadReader r m, Has Variables r) => Schema [Template] -> m (Schema Text)
-renderTemplateSchema = traverseSchema renderTemplate
+renderTemplateSchema :: (MonadError Error m, MonadReader r m, Has Variables r) => TemplateSchema -> m RenderedSchema
+renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema renderTemplate schema
 
-saveRenderedSchema :: forall m r. (MonadIO m, MonadReader r m, Has Env r, MonadError Error m) => Schema Text -> m ()
-saveRenderedSchema fs = do
+saveRenderedSchema :: forall m r. (MonadIO m, MonadReader r m, Has Env r, MonadError Error m) => RenderedSchema -> m ()
+saveRenderedSchema (RenderedSchem schema) = do
   out <- asks (paramSaveLocation . envCliParams)
   safeMakeDir out
-  go out fs
+  go out schema
   where
     go :: FilePath -> Schema Text -> m ()
     go prefix f = do
@@ -88,7 +96,7 @@ safeGetUrl url = do
              Just (Right (httpsUrl, _)) -> req GET httpsUrl NoReqBody bsResponse mempty
   pure $ responseBody r
 
-getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m (Schema Text)
+getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m RawSchema
 getRawSchema = do
   schemaLoc <- asks (paramSchemaLocation  . envCliParams)
   case schemaLoc of

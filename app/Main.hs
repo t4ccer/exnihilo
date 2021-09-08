@@ -16,7 +16,7 @@ import           Paths_exnihilo
 run :: (MonadIO m) => Env -> m ()
 run env = runApp env $ do
   getRawSchema
-  >>= parseTemplateSchema
+  >>= parseRawSchema
   >>= renderTemplateSchema
   >>= saveRenderedSchema
 
