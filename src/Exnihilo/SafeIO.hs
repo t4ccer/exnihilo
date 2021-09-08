@@ -6,6 +6,7 @@ module Exnihilo.SafeIO where
 
 import           Control.Exception    (try)
 import           Control.Monad.Except
+import           Data.ByteString      (ByteString)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T
@@ -72,9 +73,17 @@ safeMakeDir fp = do
       | isFullError e         = ErrorFileRead $ mconcat ["Cannot create directory \"", T.pack fp, "\". Insufficient resources (virtual memory, process file descriptors, physical disk space, etc.)."]
       | otherwise             = ErrorOther    $ mconcat ["Unknown error while creating directory \"", T.pack fp, "\"."]
 
+prettyYamlError :: ParseException -> Text
+prettyYamlError e = T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
+
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
 safeDecodeYamlFile fp = do
   res <- liftIO $ decodeFileEither fp
   case res of
-    Left e  -> throwError $ ErrorFileRead $ T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
+    Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
     Right v -> pure v
+
+safeDecodeYaml :: (FromJSON a, MonadError Error m) => ByteString -> m a
+safeDecodeYaml yaml = case decodeEither' yaml of
+  Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
+  Right v -> pure v

@@ -1,8 +1,7 @@
 module Main where
 
 import           Control.Monad.Except
-import           Control.Monad.Reader.Has
-import           Data.Version             (showVersion)
+import           Data.Version         (showVersion)
 import           System.Environment
 import           System.Exit
 
@@ -16,8 +15,7 @@ import           Paths_exnihilo
 
 run :: (MonadIO m) => Env -> m ()
 run env = runApp env $ do
-  asks (paramTemplateFile . envCliParams)
-  >>= safeDecodeYamlFile
+  getRawSchema
   >>= parseTemplateSchema
   >>= renderTemplateSchema
   >>= saveRenderedSchema

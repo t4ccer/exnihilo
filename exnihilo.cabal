@@ -45,9 +45,13 @@ library
     , data-default
     , directory
     , filepath
+    , http-client
+    , http-types
     , megaparsec
+    , modern-uri
     , mtl
     , optparse-applicative
+    , req
     , text
     , transformers
     , unordered-containers
@@ -71,9 +75,13 @@ executable exnihilo-exe
     , directory
     , exnihilo
     , filepath
+    , http-client
+    , http-types
     , megaparsec
+    , modern-uri
     , mtl
     , optparse-applicative
+    , req
     , text
     , transformers
     , unordered-containers

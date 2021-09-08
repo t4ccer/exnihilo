@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Exnihilo.Schema where
@@ -12,7 +13,9 @@ import           Control.Monad.Reader.Has
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Data.Yaml
+import           Network.HTTP.Req
 import           System.FilePath.Posix
+import           Text.URI
 
 import           Exnihilo.Env
 import           Exnihilo.Error
@@ -21,6 +24,7 @@ import           Exnihilo.SafeIO
 import           Exnihilo.Template
 import           Exnihilo.Variables
 
+-- TODO add type-safe wrappers for raw schema, template schema, and rendered schema
 data Schema a
   = Directory a [Schema a]
   | File      a a
@@ -69,3 +73,21 @@ saveRenderedSchema fs = do
         Directory dirName files -> do
           safeMakeDir (prefix </> T.unpack dirName)
           mapM_ (go (prefix </> T.unpack dirName)) files
+
+getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m (Schema Text)
+getRawSchema = do
+  schemaLoc <- asks (paramSchemaLocation  . envCliParams)
+  case schemaLoc of
+    SchemaLocationPath {..} -> safeDecodeYamlFile schemaLocationPath
+    SchemaLocationUrl  {..} -> do
+      let uri = mkURI schemaLocationUrl
+      r <- case uri of
+             Nothing -> throwError $ ErrorUrlInvalid schemaLocationUrl
+             Just uri' -> do
+               let url = useURI uri'
+               case url of
+                 Nothing -> throwError $ ErrorUrlInvalid schemaLocationUrl
+                 Just (Left (url', _)) -> req GET url' NoReqBody bsResponse mempty
+                 Just (Right (url', _)) -> req GET url' NoReqBody bsResponse mempty
+      let body = responseBody r
+      safeDecodeYaml body
