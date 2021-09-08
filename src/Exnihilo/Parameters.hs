@@ -10,10 +10,11 @@ module Exnihilo.Parameters
   ) where
 
 import           Control.Monad.Except
+import           Data.Maybe
 import           Data.Text            (Text)
 import           Options.Applicative
 
--- TODO add template github repo
+-- TODO add default schema file name
 data Parameters = Parameters
   { paramVariableFile   :: FilePath
   , paramSchemaLocation :: SchemaLocation
@@ -34,6 +35,11 @@ data SchemaLocation
   }
   | SchemaLocationUrl
   { schemaLocationUrl :: Text
+  }
+  | SchemaLocationGithub
+  { schemaLocationGithubRepo :: Text
+  , schemaLocationGithubRef  :: Text
+  , schemaLocationGithubPath :: Text
   }
 
 getParams :: (MonadIO m) => m Mode
@@ -59,6 +65,17 @@ createOpts = do
 
 schemaOption :: Parser SchemaLocation
 schemaOption
-  =   (SchemaLocationPath <$> strOption (short 's' <> long "schema" <> metavar "PATH" <> help "Path to schema file"))
-  <|> (SchemaLocationUrl  <$> strOption (short 'u' <> long "url"    <> metavar "URL"  <> help "Url to schema file"))
+  =   (do
+         schemaLocationPath <- strOption (short 's' <> long "schema" <> metavar "PATH" <> help "Path to schema file")
+         pure SchemaLocationPath {..})
+  <|> (do
+        schemaLocationUrl <- strOption (short 'u' <> long "url"    <> metavar "URL"  <> help "Url to schema file")
+        pure SchemaLocationUrl {..})
+  <|> (do
+        schemaLocationGithubRepo <- strOption (short 'g' <> long "github" <> metavar "REPO"  <> help "format: user/repo")
+        schemaLocationGithubRef  <- withDefault "main" $ strOption (long "ref" <> metavar "REF"  <> help "Branch or tag. Default: main")
+        schemaLocationGithubPath <- strOption (short 's' <> long "schema" <> metavar "PATH" <> help "Path to schema file")
+        pure SchemaLocationGithub{..})
 
+withDefault :: a -> Parser a -> Parser a
+withDefault d opt = fromMaybe d <$> optional opt

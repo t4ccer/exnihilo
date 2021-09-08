@@ -10,6 +10,7 @@ module Exnihilo.Schema where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
+import           Data.ByteString          (ByteString)
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Data.Yaml
@@ -74,20 +75,32 @@ saveRenderedSchema fs = do
           safeMakeDir (prefix </> T.unpack dirName)
           mapM_ (go (prefix </> T.unpack dirName)) files
 
+safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m ByteString
+safeGetUrl url = do
+  let uri = mkURI url
+  r <- case uri of
+         Nothing -> throwError $ ErrorUrlInvalid url
+         Just validUri -> do
+           let url' = useURI validUri
+           case url' of
+             Nothing -> throwError $ ErrorUrlInvalid url
+             Just (Left (httpUrl, _))   -> req GET httpUrl  NoReqBody bsResponse mempty
+             Just (Right (httpsUrl, _)) -> req GET httpsUrl NoReqBody bsResponse mempty
+  pure $ responseBody r
+
 getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m (Schema Text)
 getRawSchema = do
   schemaLoc <- asks (paramSchemaLocation  . envCliParams)
   case schemaLoc of
     SchemaLocationPath {..} -> safeDecodeYamlFile schemaLocationPath
     SchemaLocationUrl  {..} -> do
-      let uri = mkURI schemaLocationUrl
-      r <- case uri of
-             Nothing -> throwError $ ErrorUrlInvalid schemaLocationUrl
-             Just uri' -> do
-               let url = useURI uri'
-               case url of
-                 Nothing -> throwError $ ErrorUrlInvalid schemaLocationUrl
-                 Just (Left (url', _)) -> req GET url' NoReqBody bsResponse mempty
-                 Just (Right (url', _)) -> req GET url' NoReqBody bsResponse mempty
-      let body = responseBody r
-      safeDecodeYaml body
+      yaml <- safeGetUrl schemaLocationUrl
+      safeDecodeYaml yaml
+    SchemaLocationGithub {..} -> do
+      let url
+            =  "https://raw.githubusercontent.com/"
+                   <> schemaLocationGithubRepo
+            <> "/" <> schemaLocationGithubRef
+            <> "/" <> schemaLocationGithubPath
+      yaml <- safeGetUrl url
+      safeDecodeYaml yaml
