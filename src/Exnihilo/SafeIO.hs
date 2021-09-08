@@ -11,8 +11,10 @@ import           Data.Text            (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T
 import           Data.Yaml
+import           Network.HTTP.Req
 import           System.Directory
 import           System.IO.Error
+import           Text.URI
 
 import           Exnihilo.Error
 
@@ -73,7 +75,7 @@ safeMakeDir fp = do
       | isFullError e         = ErrorFileRead $ mconcat ["Cannot create directory \"", T.pack fp, "\". Insufficient resources (virtual memory, process file descriptors, physical disk space, etc.)."]
       | otherwise             = ErrorOther    $ mconcat ["Unknown error while creating directory \"", T.pack fp, "\"."]
 
-prettyYamlError :: ParseException -> Text
+prettyYamlError :: Data.Yaml.ParseException -> Text
 prettyYamlError e = T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
 
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
@@ -87,3 +89,16 @@ safeDecodeYaml :: (FromJSON a, MonadError Error m) => ByteString -> m a
 safeDecodeYaml yaml = case decodeEither' yaml of
   Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
   Right v -> pure v
+
+safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m ByteString
+safeGetUrl url = do
+  let uri = mkURI url
+  r <- case uri of
+         Nothing -> throwError $ ErrorUrlInvalid url
+         Just validUri -> do
+           let url' = useURI validUri
+           case url' of
+             Nothing -> throwError $ ErrorUrlInvalid url
+             Just (Left (httpUrl, _))   -> req GET httpUrl  NoReqBody bsResponse mempty
+             Just (Right (httpsUrl, _)) -> req GET httpsUrl NoReqBody bsResponse mempty
+  pure $ responseBody r

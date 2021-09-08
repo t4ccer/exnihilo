@@ -12,13 +12,11 @@ module Exnihilo.Schema where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
-import           Data.ByteString          (ByteString)
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Data.Yaml
 import           Network.HTTP.Req
 import           System.FilePath.Posix
-import           Text.URI
 
 import           Exnihilo.Env
 import           Exnihilo.Error
@@ -82,19 +80,6 @@ saveRenderedSchema (RenderedSchem schema) = do
         Directory dirName files -> do
           safeMakeDir (prefix </> T.unpack dirName)
           mapM_ (go (prefix </> T.unpack dirName)) files
-
-safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m ByteString
-safeGetUrl url = do
-  let uri = mkURI url
-  r <- case uri of
-         Nothing -> throwError $ ErrorUrlInvalid url
-         Just validUri -> do
-           let url' = useURI validUri
-           case url' of
-             Nothing -> throwError $ ErrorUrlInvalid url
-             Just (Left (httpUrl, _))   -> req GET httpUrl  NoReqBody bsResponse mempty
-             Just (Right (httpsUrl, _)) -> req GET httpsUrl NoReqBody bsResponse mempty
-  pure $ responseBody r
 
 getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m RawSchema
 getRawSchema = do
