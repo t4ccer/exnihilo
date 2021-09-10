@@ -16,7 +16,7 @@ data Error
   | ErrorUrlFetch Text
   | ErrorUrlInvalid Text
   | ErrorOther Text
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Semigroup Error where
   _ <> e = e

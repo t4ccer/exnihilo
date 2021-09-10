@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Exnihilo.Variables where
 
@@ -12,6 +13,7 @@ import           Data.Text           (Text)
 import qualified Data.Text           as T
 
 newtype Variables = Variables {getVariables :: Map Text Text}
+  deriving (Semigroup, Monoid)
 
 instance FromJSON Variables where
   parseJSON = withObject "Variables" $ \obj -> do
@@ -34,6 +36,9 @@ instance FromJSON Variables where
       getType (Number _) = "number"
       getType (Bool _)   = "bool"
       getType Null       = "null"
+
+fromList :: [(Text, Text)] -> Variables
+fromList = Variables . M.fromList
 
 lookupVariable :: Variables -> Text -> Maybe Text
 lookupVariable (Variables vars) key = M.lookup key vars

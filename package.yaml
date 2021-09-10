@@ -50,3 +50,14 @@ executables:
     dependencies:
     - exnihilo
 
+tests:
+  exnihilo-tests:
+    main: Spec.hs
+    source-dirs: tests
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - exnihilo
+    - hspec < 2.9
