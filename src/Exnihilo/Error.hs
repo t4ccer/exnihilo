@@ -18,12 +18,18 @@ data Error
   | ErrorOther Text
   deriving (Show)
 
+instance Semigroup Error where
+  _ <> e = e
+
+instance Monoid Error where
+  mempty = ErrorOther "mempty"
+
 prettyError :: Error -> Text
 prettyError = \case
   ErrorFileRead e        -> mconcat ["[Error] File read error. ", e]
   ErrorMissingVariable e -> mconcat ["[Error] Variable used in schema but not defined: ", e]
   ErrorFileWrite e       -> mconcat ["[Error] File write error. ", e]
-  ErrorOther e           -> mconcat ["[Error] Unknown error occured. ", e]
+  ErrorOther e           -> mconcat ["[Error] Unknown error occured: ", e]
   ErrorTemplateParse e   -> mconcat ["[Error] Could not parse template. Report this to schema author. ", e]
   ErrorUrlFetch e        -> mconcat ["[Error] Could not fetch schema from url: \"", e, "\""]
   ErrorUrlInvalid e      -> mconcat ["[Error] Invalid url: \"", e, "\""]

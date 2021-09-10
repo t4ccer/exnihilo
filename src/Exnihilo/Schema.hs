@@ -18,6 +18,7 @@ import           Data.Yaml
 import           Network.HTTP.Req
 import           System.FilePath.Posix
 
+import           Data.String
 import           Exnihilo.Env
 import           Exnihilo.Error
 import           Exnihilo.Parameters
@@ -81,19 +82,32 @@ saveRenderedSchema (RenderedSchem schema) = do
           safeMakeDir (prefix </> T.unpack dirName)
           mapM_ (go (prefix </> T.unpack dirName)) files
 
-getRawSchema :: (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m) => m RawSchema
+getRawSchema :: forall m r. (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m, Alternative m) => m RawSchema
 getRawSchema = do
   schemaLoc <- asks (paramSchemaLocation  . envCliParams)
   case schemaLoc of
-    SchemaLocationPath {..} -> safeDecodeYamlFile schemaLocationPath
-    SchemaLocationUrl  {..} -> do
-      yaml <- safeGetUrl schemaLocationUrl
-      safeDecodeYaml yaml
+    SchemaLocationPath {..} ->
+      tryGetSchema safeDecodeYamlFile schemaLocationPath
+    SchemaLocationUrl  {..} ->
+      tryGetSchema (safeDecodeYaml <=< safeGetUrl) schemaLocationUrl
     SchemaLocationGithub {..} -> do
       let url
             =  "https://raw.githubusercontent.com/"
                    <> schemaLocationGithubRepo
             <> "/" <> schemaLocationGithubRef
             <> "/" <> schemaLocationGithubPath
-      yaml <- safeGetUrl url
-      safeDecodeYaml yaml
+      tryGetSchema (safeDecodeYaml <=< safeGetUrl) url
+    where
+      tryGetSchema :: (Semigroup a, IsString a) => (a -> m RawSchema) -> a -> m RawSchema
+      tryGetSchema f x = firstSuccess f $ possiblePaths x
+      possiblePaths xs =
+        [ xs
+        , xs <> "/exnihilo.yaml"
+        , xs <> "/exnihilo.yml"
+        , xs <> "/.exnihilo"
+        , xs <> "/.exnihilo.yaml"
+        , xs <> "/.exnihilo.yml"
+        ]
+      firstSuccess :: Alternative f => (b -> f a) -> [b] -> f a
+      firstSuccess _ []     = empty
+      firstSuccess f (x:xs) = f x <|> firstSuccess f xs

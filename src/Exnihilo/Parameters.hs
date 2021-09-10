@@ -14,7 +14,6 @@ import           Data.Maybe
 import           Data.Text            (Text)
 import           Options.Applicative
 
--- TODO add default schema file name
 data Parameters = Parameters
   { paramVariableFile   :: FilePath
   , paramSchemaLocation :: SchemaLocation
