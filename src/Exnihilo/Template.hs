@@ -41,7 +41,7 @@ renderTemplate templ = do
   T.concat <$> traverse go templ
 
 templateP :: Parser [Template]
-templateP = fmap concat $ many $ choice [try varP, try textP]
+templateP = fmap concat $ many $ choice [try varP, try textP, try oneBraceP]
 
 varP :: Parser [Template]
 varP = string "{{" *> (pure . TemplateVariable . T.strip . T.pack <$> many (anySingleBut '}')) <* wsP <* string "}}"
@@ -51,3 +51,6 @@ wsP = many (char ' ')
 
 textP :: Parser [Template]
 textP = pure . TemplateConstant . T.pack <$> some (anySingleBut '{')
+
+oneBraceP :: Parser [Template]
+oneBraceP = pure . TemplateConstant . T.singleton <$> char '{'
