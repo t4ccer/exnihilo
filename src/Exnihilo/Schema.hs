@@ -102,6 +102,8 @@ getRawSchema = do
       tryGetSchema f x = firstSuccess f $ possiblePaths x
       possiblePaths xs =
         [ xs
+        , xs <> ".yaml"
+        , xs <> ".yml"
         , xs <> "/exnihilo.yaml"
         , xs <> "/exnihilo.yml"
         , xs <> "/.exnihilo"
