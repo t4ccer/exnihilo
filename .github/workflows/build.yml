@@ -1,0 +1,31 @@
+on: [push, pull_request]
+name: Build
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Setup stack
+        uses: haskell/actions/setup@v1
+        with:
+          ghc-version: '8.10.4'
+          cabal-version: 'latest'
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Cache dependencies
+        uses: actions/cache@v1
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-${{ hashFiles('stack.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - name: Build
+        run: stack build
+
+      - name: Tests
+        run: stack test
