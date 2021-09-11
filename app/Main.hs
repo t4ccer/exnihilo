@@ -7,6 +7,7 @@ import           Data.Version         (showVersion)
 import           System.Environment
 import           System.Exit
 
+import           Control.Monad.Reader
 import           Exnihilo.App
 import           Exnihilo.Error
 import           Exnihilo.Parameters
@@ -17,6 +18,7 @@ import           Paths_exnihilo
 
 run :: (MonadIO m) => Parameters -> Variables -> m ()
 run params vars = runApp params vars $ do
+  asks paramVariableOverrides >>= applyOverrides
   rawSchema <- getRawSchema
   templateSchema <- parseRawSchema rawSchema
   tryGetMissingVariables templateSchema

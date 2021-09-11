@@ -14,20 +14,26 @@ import           Data.Maybe
 import           Data.Text            (Text)
 import           Options.Applicative
 
+import           Exnihilo.Variables
+
 data Parameters = Parameters
-  { paramVariableFile   :: FilePath
-  , paramSchemaLocation :: SchemaLocation
-  , paramSaveLocation   :: FilePath
-  , paramNoInteractive  :: Bool
+  { paramVariableFile      :: FilePath
+  , paramSchemaLocation    :: SchemaLocation
+  , paramSaveLocation      :: FilePath
+  , paramNoInteractive     :: Bool
+  , paramVariableOverrides :: Variables
   }
+ deriving (Show)
 
 newtype VersionParameters = VersionParameters
   { paramVersionNumeric :: Bool
   }
+ deriving (Show)
 
 data Mode
  = ModeVersion VersionParameters
  | ModeCreate Parameters
+ deriving (Show)
 
 data SchemaLocation
   = SchemaLocationPath
@@ -41,6 +47,7 @@ data SchemaLocation
   , schemaLocationGithubRef  :: Text
   , schemaLocationGithubPath :: Text
   }
+ deriving (Show)
 
 getParams :: (MonadIO m) => m Mode
 getParams = liftIO $ customExecParser (prefs showHelpOnError) $ info (helper <*> opts) fullDesc
@@ -58,11 +65,18 @@ versionOpts = do
 
 createOpts :: Parser Parameters
 createOpts = do
-  paramVariableFile   <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
-  paramSchemaLocation <- schemaOption
-  paramSaveLocation   <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
-  paramNoInteractive  <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
+  paramVariableFile      <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
+  paramSchemaLocation    <- schemaOption
+  paramSaveLocation      <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
+  paramNoInteractive     <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
+  paramVariableOverrides <- fromList <$>  many varOpts
   pure Parameters{..}
+
+varOpts :: Parser (Text, Text)
+varOpts = do
+  k <- strOption (short 'k' <> long "key" <> metavar "KEY" <> help "Variable name to overrite")
+  v <- strOption (short 'v' <> long "value" <> metavar "VAL" <> help "Variable value to overrite")
+  pure (k, v)
 
 schemaOption :: Parser SchemaLocation
 schemaOption

@@ -62,7 +62,11 @@ askForVariable missing =  do
 askForMissingVariables :: forall m. (MonadIO m, MonadState Variables m) => [Text] -> m ()
 askForMissingVariables missing = do
   new <- liftIO $ execStateT (go missing) mempty
-  modify (Variables . M.union (getVariables new) . getVariables)
+  applyOverrides new
   where
     go []     = pure ()
     go (x:xs) = askForVariable x >> go xs
+
+applyOverrides :: (MonadState Variables m) => Variables -> m ()
+applyOverrides vars =
+  modify (Variables . M.union (getVariables vars) . getVariables)
