@@ -17,7 +17,7 @@ import           Options.Applicative
 import           Exnihilo.Variables
 
 data Parameters = Parameters
-  { paramVariableFile      :: FilePath
+  { paramVariableFile      :: Maybe FilePath
   , paramSchemaLocation    :: SchemaLocation
   , paramSaveLocation      :: FilePath
   , paramNoInteractive     :: Bool
@@ -65,7 +65,7 @@ versionOpts = do
 
 createOpts :: Parser Parameters
 createOpts = do
-  paramVariableFile      <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
+  paramVariableFile      <- optional $ strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
   paramSchemaLocation    <- schemaOption
   paramSaveLocation      <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
   paramNoInteractive     <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")

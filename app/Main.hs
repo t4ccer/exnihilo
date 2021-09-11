@@ -35,7 +35,9 @@ runInit = runExceptT $ do
         else liftIO $ putStrLn $ ("exnihilo v" <>)  $ showVersion version
       liftIO exitSuccess
     ModeCreate params@Parameters{..} -> do
-      vars <- safeDecodeYamlFile paramVariableFile
+      vars <- case paramVariableFile of
+        Just paramVariableFile' -> safeDecodeYamlFile paramVariableFile'
+        Nothing                 -> pure mempty
       pure (params, vars)
 
 main :: IO ()
