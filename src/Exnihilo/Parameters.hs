@@ -18,6 +18,7 @@ data Parameters = Parameters
   { paramVariableFile   :: FilePath
   , paramSchemaLocation :: SchemaLocation
   , paramSaveLocation   :: FilePath
+  , paramNoInteractive  :: Bool
   }
 
 newtype VersionParameters = VersionParameters
@@ -57,18 +58,19 @@ versionOpts = do
 
 createOpts :: Parser Parameters
 createOpts = do
-  paramVariableFile <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
+  paramVariableFile   <- strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
   paramSchemaLocation <- schemaOption
-  paramSaveLocation <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
+  paramSaveLocation   <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
+  paramNoInteractive  <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
   pure Parameters{..}
 
 schemaOption :: Parser SchemaLocation
 schemaOption
   =   (do
-         schemaLocationPath <- strOption (short 's' <> long "schema" <> metavar "PATH" <> help "Path to schema file")
+         schemaLocationPath      <- strOption (short 's' <> long "schema" <> metavar "PATH" <> help "Path to schema file")
          pure SchemaLocationPath {..})
   <|> (do
-        schemaLocationUrl <- strOption (short 'u' <> long "url"    <> metavar "URL"  <> help "Url to schema file")
+        schemaLocationUrl        <- strOption (short 'u' <> long "url"    <> metavar "URL"  <> help "Url to schema file")
         pure SchemaLocationUrl {..})
   <|> (do
         schemaLocationGithubRepo <- strOption (short 'g' <> long "github" <> metavar "REPO"  <> help "format: user/repo")

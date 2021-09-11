@@ -16,11 +16,13 @@ import           Network.HTTP.Req
 import           Network.HTTP.Types.Status
 import           System.IO
 
-import           Exnihilo.Env
+import           Control.Monad.State
 import           Exnihilo.Error
+import           Exnihilo.Parameters
+import           Exnihilo.Variables
 
-newtype App a = App {getApp :: ReaderT Env (ExceptT Error IO) a}
-  deriving newtype (Functor, Applicative, Alternative, Monad, MonadIO, MonadError Error, MonadReader Env)
+newtype App a = App {getApp :: StateT Variables (ReaderT Parameters (ExceptT Error IO)) a}
+  deriving newtype (Functor, Applicative, Alternative, Monad, MonadIO, MonadError Error, MonadReader Parameters, MonadState Variables)
 
 instance MonadHttp App where
   handleHttpException = throwError . prettyHttpException
@@ -53,8 +55,8 @@ instance MonadHttp App where
           InvalidUrlException e' _ -> ErrorUrlInvalid $ T.pack e'
         JsonHttpException  e -> ErrorUrlFetch $ T.pack e
 
-runApp :: MonadIO m => Env -> App () -> m ()
-runApp env = printIfError . liftIO . runExceptT . flip runReaderT env . getApp
+runApp :: MonadIO m => Parameters -> Variables -> App () -> m ()
+runApp params vars = printIfError . liftIO . runExceptT . flip runReaderT params . flip evalStateT vars . getApp
   where
     printIfError m = do
       res <- m

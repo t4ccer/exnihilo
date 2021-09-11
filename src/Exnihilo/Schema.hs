@@ -12,14 +12,16 @@ module Exnihilo.Schema where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
+import qualified Data.Map                 as M
+import qualified Data.Set                 as S
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Data.Yaml
 import           Network.HTTP.Req
 import           System.FilePath.Posix
 
+import           Control.Monad.State
 import           Data.String
-import           Exnihilo.Env
 import           Exnihilo.Error
 import           Exnihilo.Parameters
 import           Exnihilo.SafeIO
@@ -34,7 +36,7 @@ data Schema a
 newtype RawSchema = RawSchema (Schema Text)
   deriving newtype FromJSON
 
-newtype TemplateSchema = TemplateSchema (Schema [Template])
+newtype TemplateSchema = TemplateSchema {getTemplateSchema :: Schema Template}
 
 newtype RenderedSchema = RenderedSchem (Schema Text)
 
@@ -65,12 +67,12 @@ traverseSchema f fs = do
 parseRawSchema :: MonadError Error m => RawSchema -> m TemplateSchema
 parseRawSchema (RawSchema schema) = TemplateSchema <$> traverseSchema parseTemplate schema
 
-renderTemplateSchema :: (MonadError Error m, MonadReader r m, Has Variables r) => TemplateSchema -> m RenderedSchema
+renderTemplateSchema :: (MonadError Error m, MonadState Variables m) => TemplateSchema -> m RenderedSchema
 renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema renderTemplate schema
 
-saveRenderedSchema :: forall m r. (MonadIO m, MonadReader r m, Has Env r, MonadError Error m) => RenderedSchema -> m ()
+saveRenderedSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m) => RenderedSchema -> m ()
 saveRenderedSchema (RenderedSchem schema) = do
-  out <- asks (paramSaveLocation . envCliParams)
+  out <- asks paramSaveLocation
   safeMakeDir out
   go out schema
   where
@@ -82,9 +84,29 @@ saveRenderedSchema (RenderedSchem schema) = do
           safeMakeDir (prefix </> T.unpack dirName)
           mapM_ (go (prefix </> T.unpack dirName)) files
 
-getRawSchema :: forall m r. (MonadIO m, MonadReader r m, Has Env r, MonadError Error m, MonadHttp m, Alternative m) => m RawSchema
+toList :: Monoid a => Schema a -> [(a,a)]
+toList (File fp content)    = [(fp, content)]
+toList (Directory fp files) = (fp, mempty) : concatMap toList files
+
+schemaUsedVariables :: TemplateSchema -> [Text]
+schemaUsedVariables = concatMap (concatMap requiredVariables . \(x,y) -> [x, y]) . toList . getTemplateSchema
+
+schemaMissingVariables :: (MonadState Variables m) => TemplateSchema -> m [Text]
+schemaMissingVariables schema = do
+  declaredNames <- gets (S.fromList . M.keys . getVariables)
+  let usedNames = S.fromList $ schemaUsedVariables schema
+  pure $ S.toList $ S.difference usedNames declaredNames
+
+tryGetMissingVariables :: (MonadIO m, MonadState Variables m, MonadReader Parameters m) => TemplateSchema -> m ()
+tryGetMissingVariables schema = do
+  Parameters{..} <- ask
+  unless paramNoInteractive $ do
+    missing <- schemaMissingVariables schema
+    askForMissingVariables missing
+
+getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m, Alternative m) => m RawSchema
 getRawSchema = do
-  schemaLoc <- asks (paramSchemaLocation  . envCliParams)
+  schemaLoc <- asks paramSchemaLocation
   case schemaLoc of
     SchemaLocationPath {..} ->
       tryGetSchema safeDecodeYamlFile schemaLocationPath
