@@ -6,7 +6,7 @@
 module Main where
 
 import           Control.Monad.Except
-import           Control.Monad.Reader
+import           Control.Monad.State
 import           Test.Hspec
 
 import           Exnihilo.Error
@@ -43,5 +43,5 @@ templateSpec = describe "Template engine" do
       shouldRender (inp, vars) exp = testTemplate inp (pure exp) vars
       shouldFailWith (inp, vars) e = testTemplate inp (throwError e) vars
       testTemplate inp exp vars = do
-        out <- runExceptT $ runReaderT @Variables (parseTemplate inp >>= renderTemplate) vars
+        out <- runExceptT $ evalStateT (parseTemplate inp >>= renderTemplate) vars
         out `shouldBe` exp
