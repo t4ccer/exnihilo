@@ -6,7 +6,6 @@ module Exnihilo.SafeIO where
 
 import           Control.Exception     (try)
 import           Control.Monad.Except
-import           Data.ByteString       (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Text             (Text)
 import qualified Data.Text             as T
@@ -80,14 +79,14 @@ prettyYamlError :: Data.Yaml.ParseException -> Text
 prettyYamlError e = T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
 
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
-safeDecodeYamlFile fp = safeReadFile fp >>= safeDecodeYaml . BS.pack . T.unpack
+safeDecodeYamlFile fp = safeReadFile fp >>= safeDecodeYaml
 
-safeDecodeYaml :: (FromJSON a, MonadError Error m) => ByteString -> m a
-safeDecodeYaml yaml = case decodeEither' yaml of
+safeDecodeYaml :: (FromJSON a, MonadError Error m) => Text -> m a
+safeDecodeYaml yaml = case decodeEither' (BS.pack $ T.unpack yaml) of
   Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
   Right v -> pure v
 
-safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m ByteString
+safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m Text
 safeGetUrl url = do
   let uri = mkURI url
   r <- case uri of
@@ -98,4 +97,4 @@ safeGetUrl url = do
              Nothing -> throwError $ ErrorUrlInvalid url
              Just (Left (httpUrl, _))   -> req GET httpUrl  NoReqBody bsResponse mempty
              Just (Right (httpsUrl, _)) -> req GET httpsUrl NoReqBody bsResponse mempty
-  pure $ responseBody r
+  pure $ T.pack $ BS.unpack $ responseBody r

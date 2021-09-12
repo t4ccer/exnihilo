@@ -14,6 +14,7 @@ import           Data.Maybe
 import           Data.Text            (Text)
 import           Options.Applicative
 
+import qualified Data.Map             as M
 import           Exnihilo.Variables
 
 data Parameters = Parameters
@@ -69,14 +70,14 @@ createOpts = do
   paramSchemaLocation    <- schemaOption
   paramSaveLocation      <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
   paramNoInteractive     <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
-  paramVariableOverrides <- fromList <$>  many varOpts
+  paramVariableOverrides <- fromList <$> many varOpts
   pure Parameters{..}
 
-varOpts :: Parser (Text, Text)
+varOpts :: Parser (Text, Variable)
 varOpts = do
   k <- strOption (short 'k' <> long "key" <> metavar "KEY" <> help "Variable name to overrite")
   v <- strOption (short 'v' <> long "value" <> metavar "VAL" <> help "Variable value to overrite")
-  pure (k, v)
+  pure $ either (const (k, VarString v)) (head . M.toList . getVariables) $ runExcept $ parseVariable k v
 
 schemaOption :: Parser SchemaLocation
 schemaOption

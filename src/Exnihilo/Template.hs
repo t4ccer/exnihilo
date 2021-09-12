@@ -51,7 +51,7 @@ renderTemplate templ = do
     go = \case
        (TemplateVariable var) -> case lookupVariable vars var of
          Nothing -> throwError $ ErrorMissingVariable var
-         Just v  -> pure v
+         Just v  -> pure $ renderVariable v
        (TemplateConstant cons) -> pure cons
   fmap T.concat $ traverse go $ getTemplateAst templ
 
