@@ -11,6 +11,7 @@ import           System.IO
 data Error
   = ErrorMissingVariable Text
   | ErrorFileRead Text
+  | ErrorFileReadMissing Text
   | ErrorFileWrite Text
   | ErrorTemplateParse Text
   | ErrorUrlFetch Text
@@ -18,15 +19,10 @@ data Error
   | ErrorOther Text
   deriving (Show, Eq)
 
-instance Semigroup Error where
-  _ <> e = e
-
-instance Monoid Error where
-  mempty = ErrorOther "mempty"
-
 prettyError :: Error -> Text
 prettyError = \case
   ErrorFileRead e        -> mconcat ["[Error] File read error. ", e]
+  ErrorFileReadMissing e -> mconcat ["[Error] File read error. File '", e, "' does not exist."]
   ErrorMissingVariable e -> mconcat ["[Error] Variable used in schema but not defined: ", e]
   ErrorFileWrite e       -> mconcat ["[Error] File write error. ", e]
   ErrorOther e           -> mconcat ["[Error] Unknown error occured: ", e]

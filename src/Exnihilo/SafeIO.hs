@@ -4,12 +4,13 @@
 
 module Exnihilo.SafeIO where
 
-import           Control.Exception    (try)
+import           Control.Exception     (try)
 import           Control.Monad.Except
-import           Data.ByteString      (ByteString)
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import qualified Data.Text.IO         as T
+import           Data.ByteString       (ByteString)
+import qualified Data.ByteString.Char8 as BS
+import           Data.Text             (Text)
+import qualified Data.Text             as T
+import qualified Data.Text.IO          as T
 import           Data.Yaml
 import           Network.HTTP.Req
 import           System.Directory
@@ -32,10 +33,10 @@ safeReadFile fp  = do
         Right v -> Right v
         Left e  -> Left $ handler e
     handler e
-      | isDoesNotExistError e = ErrorFileRead $ mconcat ["Cannot read file \"", T.pack fp, "\". File does not exist."]
-      | isAlreadyInUseError e = ErrorFileRead $ mconcat ["Cannot read file \"", T.pack fp, "\". File is already in use."]
-      | isPermissionError   e = ErrorFileRead $ mconcat ["Cannot read file \"", T.pack fp, "\". Permission denied."]
-      | otherwise             = ErrorOther    $ mconcat ["Unknown error while reading file \"", T.pack fp, "\"."]
+      | isDoesNotExistError e = ErrorFileReadMissing $ mconcat ["Cannot read file \"", T.pack fp, "\". File does not exist."]
+      | isAlreadyInUseError e = ErrorFileRead        $ mconcat ["Cannot read file \"", T.pack fp, "\". File is already in use."]
+      | isPermissionError   e = ErrorFileRead        $ mconcat ["Cannot read file \"", T.pack fp, "\". Permission denied."]
+      | otherwise             = ErrorOther           $ mconcat ["Unknown error while reading file \"", T.pack fp, "\"."]
 
 safeWriteFile :: (MonadIO m, MonadError Error m) => FilePath -> Text -> m ()
 safeWriteFile fp content  = do
@@ -79,11 +80,7 @@ prettyYamlError :: Data.Yaml.ParseException -> Text
 prettyYamlError e = T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
 
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
-safeDecodeYamlFile fp = do
-  res <- liftIO $ decodeFileEither fp
-  case res of
-    Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
-    Right v -> pure v
+safeDecodeYamlFile fp = safeReadFile fp >>= safeDecodeYaml . BS.pack . T.unpack
 
 safeDecodeYaml :: (FromJSON a, MonadError Error m) => ByteString -> m a
 safeDecodeYaml yaml = case decodeEither' yaml of

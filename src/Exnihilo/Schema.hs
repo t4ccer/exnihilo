@@ -21,7 +21,6 @@ import           Network.HTTP.Req
 import           System.FilePath.Posix
 
 import           Control.Monad.State
-import           Data.String
 import           Exnihilo.Error
 import           Exnihilo.Parameters
 import           Exnihilo.SafeIO
@@ -104,24 +103,23 @@ tryGetMissingVariables schema = do
     missing <- schemaMissingVariables schema
     askForMissingVariables missing
 
-getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m, Alternative m) => m RawSchema
+getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m) => m RawSchema
 getRawSchema = do
   schemaLoc <- asks paramSchemaLocation
   case schemaLoc of
     SchemaLocationPath {..} ->
-      tryGetSchema safeDecodeYamlFile schemaLocationPath
+      tryGetSchema  safeDecodeYamlFile (T.pack schemaLocationPath) schemaLocationPath
     SchemaLocationUrl  {..} ->
-      tryGetSchema (safeDecodeYaml <=< safeGetUrl) schemaLocationUrl
+      tryGetSchema (safeDecodeYaml <=< safeGetUrl) schemaLocationUrl schemaLocationUrl
     SchemaLocationGithub {..} -> do
       let url
             =  "https://raw.githubusercontent.com/"
                    <> schemaLocationGithubRepo
             <> "/" <> schemaLocationGithubRef
             <> "/" <> schemaLocationGithubPath
-      tryGetSchema (safeDecodeYaml <=< safeGetUrl) url
+      tryGetSchema (safeDecodeYaml <=< safeGetUrl) url url
     where
-      tryGetSchema :: (Semigroup a, IsString a) => (a -> m RawSchema) -> a -> m RawSchema
-      tryGetSchema f x = firstSuccess f $ possiblePaths x
+      tryGetSchema f fp x = firstSuccess f fp (possiblePaths x)
       possiblePaths xs =
         [ xs
         , xs <> ".yaml"
@@ -132,6 +130,7 @@ getRawSchema = do
         , xs <> "/.exnihilo.yaml"
         , xs <> "/.exnihilo.yml"
         ]
-      firstSuccess :: Alternative f => (b -> f a) -> [b] -> f a
-      firstSuccess _ []     = empty
-      firstSuccess f (x:xs) = f x <|> firstSuccess f xs
+      firstSuccess _ fp [] = throwError $ ErrorFileReadMissing fp
+      firstSuccess f fp (x:xs) = f x `catchError` (\e -> case e of
+                                                   ErrorFileReadMissing _ -> firstSuccess f fp xs
+                                                   _                      -> throwError e)

@@ -5,7 +5,6 @@
 
 module Exnihilo.App where
 
-import           Control.Applicative
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
 import qualified Data.ByteString.Char8     as BS
@@ -22,7 +21,7 @@ import           Exnihilo.Parameters
 import           Exnihilo.Variables
 
 newtype App a = App {getApp :: StateT Variables (ReaderT Parameters (ExceptT Error IO)) a}
-  deriving newtype (Functor, Applicative, Alternative, Monad, MonadIO, MonadError Error, MonadReader Parameters, MonadState Variables)
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadError Error, MonadReader Parameters, MonadState Variables)
 
 instance MonadHttp App where
   handleHttpException = throwError . prettyHttpException
