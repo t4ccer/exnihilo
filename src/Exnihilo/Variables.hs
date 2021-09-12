@@ -59,8 +59,12 @@ instance FromJSON Variables where
 fromList :: [(Text, Variable)] -> Variables
 fromList = Variables . M.fromList
 
-lookupVariable :: Variables -> Text -> Maybe Variable
-lookupVariable (Variables vars) key = M.lookup key vars
+lookupVariable :: (MonadState Variables m, MonadError Error m) => Text -> m Variable
+lookupVariable key = do
+  (Variables vars) <- get
+  case M.lookup key vars of
+    Just v  -> pure v
+    Nothing -> throwError $ ErrorMissingVariable key
 
 parseVariable :: (MonadError Error m) => Text -> Text -> m Variables
 parseVariable k v = safeDecodeYaml $ k  <>  ": " <> v

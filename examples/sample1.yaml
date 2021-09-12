@@ -6,3 +6,4 @@ files:
     files:
       - file: "bar.txt"
         content: "I do not exist: {{ foobar }}"
+        condition: create_bar

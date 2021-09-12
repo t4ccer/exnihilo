@@ -16,6 +16,7 @@ data Error
   | ErrorTemplateParse Text
   | ErrorUrlFetch Text
   | ErrorUrlInvalid Text
+  | ErrorTypeCheck Text
   | ErrorOther Text
   deriving (Show, Eq)
 
@@ -28,6 +29,7 @@ prettyError = \case
   ErrorOther e           -> mconcat ["[Error] Unknown error occured: ", e]
   ErrorTemplateParse e   -> mconcat ["[Error] Could not parse template. Report this to schema author. ", e]
   ErrorUrlFetch e        -> mconcat ["[Error] Could not fetch schema from url: \"", e, "\""]
+  ErrorTypeCheck e       -> mconcat ["[Error] Type checker error: ", e]
   ErrorUrlInvalid e      -> mconcat ["[Error] Invalid url: \"", e, "\""]
 
 printError :: MonadIO m => Error -> m ()

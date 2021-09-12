@@ -45,13 +45,10 @@ parseTemplate = maybe (throwError $ ErrorTemplateParse "") pure . parseMaybe tem
 
 renderTemplate :: forall m. (MonadState Variables m, MonadError Error m) => Template -> m Text
 renderTemplate templ = do
-  vars <- get
   let
     go :: TemplateAst -> m Text
     go = \case
-       (TemplateVariable var) -> case lookupVariable vars var of
-         Nothing -> throwError $ ErrorMissingVariable var
-         Just v  -> pure $ renderVariable v
+       (TemplateVariable var)  -> renderVariable <$> lookupVariable var
        (TemplateConstant cons) -> pure cons
   fmap T.concat $ traverse go $ getTemplateAst templ
 
