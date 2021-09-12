@@ -23,6 +23,7 @@ data Parameters = Parameters
   , paramSaveLocation      :: FilePath
   , paramNoInteractive     :: Bool
   , paramVariableOverrides :: Variables
+  , paramDryRun            :: Bool
   }
  deriving (Show)
 
@@ -58,17 +59,18 @@ opts = versionOpts <|> createOpts
 
 versionOpts :: Parser Mode
 versionOpts = do
-  _ <- switch (short 'v' <> long "version" <> help "Print version")
+  _ <- switch (long "version" <> help "Print version")
   paramVersionNumeric <- switch (long "numeric" <> help "Print only version number")
   pure $ ModeVersion VersionParameters{..}
 
 createOpts :: Parser Mode
 createOpts = do
-  paramVariableFile      <- optional $ strOption (short 'v' <> long "variables"   <> metavar "FILE" <> help "Path to file with variables")
+  paramVariableFile      <- optional $ strOption (long "variables"   <> metavar "FILE" <> help "Path to file with variables")
   paramSchemaLocation    <- schemaOption
   paramSaveLocation      <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
   paramNoInteractive     <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
   paramVariableOverrides <- fromList <$> many varOpts
+  paramDryRun            <- flag False True  (long "dry-run" <> help "Do not create any files.")
   pure $ ModeCreate Parameters{..}
 
 varOpts :: Parser (Text, Variable)

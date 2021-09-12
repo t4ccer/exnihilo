@@ -18,12 +18,13 @@ import           Paths_exnihilo
 
 run :: (MonadIO m) => Parameters -> Variables -> m ()
 run params vars = runApp params vars $ do
-  asks paramVariableOverrides >>= applyOverrides
+  Parameters{..} <- ask
+  applyOverrides paramVariableOverrides
   rawSchema <- getRawSchema
   templateSchema <- parseRawSchema rawSchema
   tryGetMissingVariables templateSchema
   renderedSchema <- renderTemplateSchema templateSchema
-  saveRenderedSchema renderedSchema
+  unless paramDryRun $ saveRenderedSchema renderedSchema
 
 runInit :: (MonadIO m) => m (Either Error (Parameters, Variables))
 runInit = runExceptT $ do
