@@ -3,11 +3,11 @@
 module Main where
 
 import           Control.Monad.Except
+import           Control.Monad.Reader
 import           Data.Version         (showVersion)
 import           System.Environment
 import           System.Exit
 
-import           Control.Monad.Reader
 import           Exnihilo.App
 import           Exnihilo.Error
 import           Exnihilo.Parameters
