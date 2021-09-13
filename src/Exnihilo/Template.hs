@@ -8,7 +8,6 @@
 module Exnihilo.Template where
 
 import           Control.Monad.Except
-import           Data.Maybe
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Data.Void
@@ -32,13 +31,6 @@ data TemplateAst
   = TemplateVariable Text
   | TemplateConstant Text
   deriving (Show, Eq)
-
-astVariable :: TemplateAst -> Maybe Text
-astVariable (TemplateVariable name) = pure name
-astVariable _                       = Nothing
-
-requiredVariables :: Template -> [Text]
-requiredVariables = mapMaybe astVariable . getTemplateAst
 
 parseTemplate :: MonadError Error m => Text -> m Template
 parseTemplate = maybe (throwError $ ErrorTemplateParse "") pure . parseMaybe templateP
