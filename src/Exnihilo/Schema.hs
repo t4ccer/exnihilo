@@ -16,7 +16,6 @@ import           Control.Monad.Except
 import           Control.Monad.Reader.Has
 import           Control.Monad.State
 import           Data.Foldable            (traverse_)
-import           Data.List                (nub)
 import qualified Data.Map                 as M
 import           Data.Maybe
 import qualified Data.Set                 as S
@@ -37,6 +36,7 @@ data Schema a
   = Schema
   { schemaFiles        :: FilesSchema a
   , schemaPostSaveHook :: [Hook a]
+  , schemaPreSaveHook  :: [Hook a]
   }
   deriving (Show, Functor)
 
@@ -44,6 +44,7 @@ instance FromJSON (Schema Text) where
   parseJSON = withObject "Schema" $ \v -> do
     schemaFiles        <- v .: "files"
     schemaPostSaveHook <- fromMaybe [] <$> v .:? "postSaveHook"
+    schemaPreSaveHook  <- fromMaybe [] <$> v .:? "preSaveHook"
     pure Schema{..}
 
 data FilesSchema a
@@ -103,7 +104,12 @@ traverseSchema :: Monad m => (a1 -> m a2) -> Schema a1 -> m (Schema a2)
 traverseSchema f schema@Schema{..} = do
   fs <- traverseFilesSchema f schemaFiles
   newPostSaveHook <- traverseHooks f schemaPostSaveHook
-  pure $ schema{schemaFiles = fs, schemaPostSaveHook = newPostSaveHook}
+  newPreSaveHook  <- traverseHooks f schemaPreSaveHook
+  pure $ schema
+    { schemaFiles = fs
+    , schemaPostSaveHook = newPostSaveHook
+    , schemaPreSaveHook = newPreSaveHook
+    }
 
 parseRawSchema :: MonadError Error m => RawSchema -> m TemplateSchema
 parseRawSchema (RawSchema schema) = TemplateSchema <$> traverseSchema parseTemplate schema
@@ -135,6 +141,7 @@ renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema 
 
 saveRenderedSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadState Variables m) => RenderedSchema -> m ()
 saveRenderedSchema (RenderedSchem Schema{..}) = do
+  runHooks schemaPreSaveHook
   out <- asks paramSaveLocation
   safeMakeDir out
   go out schemaFiles
@@ -159,10 +166,12 @@ saveRenderedSchema (RenderedSchem Schema{..}) = do
 
 -- TODO get variables from hooks
 schemaUsedVariables :: TemplateSchema -> [Text]
-schemaUsedVariables (TemplateSchema Schema{..}) = nub $ filesVars <> postSaveHookVars
+schemaUsedVariables (TemplateSchema Schema{..}) = filesVars <> postSaveHookVars <> preSaveHookVars
   where
-    postSaveHookVars = catMaybes $ concatMap (fmap getVariable . getTemplateAst . hookCommand) schemaPostSaveHook
+    postSaveHookVars = getFromHook schemaPostSaveHook
+    preSaveHookVars  = getFromHook schemaPreSaveHook
     filesVars = mapMaybe getVariable $ concatMap getTemplateAst $ go schemaFiles
+    getFromHook = catMaybes . concatMap (fmap getVariable . getTemplateAst . hookCommand)
     go :: FilesSchema Template -> [Template]
     go s = case s of
       File{..} ->
