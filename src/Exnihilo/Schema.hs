@@ -15,8 +15,8 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
 import           Control.Monad.State
-import           Data.Coerce              (coerce)
 import           Data.Foldable            (traverse_)
+import           Data.List                (nub)
 import qualified Data.Map                 as M
 import           Data.Maybe
 import qualified Data.Set                 as S
@@ -27,15 +27,29 @@ import           Network.HTTP.Req
 import           System.FilePath.Posix
 
 import           Exnihilo.Error
+import           Exnihilo.Hook
 import           Exnihilo.Parameters
 import           Exnihilo.SafeIO
 import           Exnihilo.Template
 import           Exnihilo.Variables
 
 data Schema a
+  = Schema
+  { schemaFiles        :: FilesSchema a
+  , schemaPostSaveHook :: [Hook a]
+  }
+  deriving (Show, Functor)
+
+instance FromJSON (Schema Text) where
+  parseJSON = withObject "Schema" $ \v -> do
+    schemaFiles        <- v .: "files"
+    schemaPostSaveHook <- fromMaybe [] <$> v .:? "postSaveHook"
+    pure Schema{..}
+
+data FilesSchema a
   = Directory
   { directoryName            :: a
-  , directoryFiles           :: [Schema a]
+  , directoryFiles           :: [FilesSchema a]
   , directoryCreateCondition :: Maybe Text
   }
   | File
@@ -52,7 +66,7 @@ newtype TemplateSchema = TemplateSchema {getTemplateSchema :: Schema Template}
 
 newtype RenderedSchema = RenderedSchem (Schema Text)
 
-instance FromJSON (Schema Text) where
+instance FromJSON (FilesSchema Text) where
   parseJSON x = parseDir x <|> parseFile x
     where
       parseDir = withObject "Schema" $ \v -> do
@@ -66,49 +80,65 @@ instance FromJSON (Schema Text) where
         fileCreateCondition <- v .:? "condition"
         pure $ File {..}
 
-traverseSchema :: Monad m => (a -> m b) -> Schema a -> m (Schema b)
-traverseSchema f fs =
-  case fs of
+traverseFilesSchema :: Monad m => (a -> m b) -> FilesSchema a -> m (FilesSchema b)
+traverseFilesSchema f schema =
+  case schema of
     File{..} -> do
       fileName' <- f fileName
       fileContent'  <- f fileContent
       pure $ File fileName' fileContent' fileCreateCondition
     Directory{..} -> do
       directoryName' <- f directoryName
-      directoryFiles' <- traverse (traverseSchema f) directoryFiles
+      directoryFiles' <- traverse (traverseFilesSchema f) directoryFiles
       pure $ Directory directoryName' directoryFiles' directoryCreateCondition
+
+traverseHooks :: Monad m => (a -> m b) -> [Hook a] -> m [Hook b]
+traverseHooks f hooks = do
+  let vals = fmap hookCommand hooks
+  newVals <- traverse f vals
+  let newHooks = zipWith (\n h -> h{hookCommand = n}) newVals hooks
+  pure newHooks
+
+traverseSchema :: Monad m => (a1 -> m a2) -> Schema a1 -> m (Schema a2)
+traverseSchema f schema@Schema{..} = do
+  fs <- traverseFilesSchema f schemaFiles
+  newPostSaveHook <- traverseHooks f schemaPostSaveHook
+  pure $ schema{schemaFiles = fs, schemaPostSaveHook = newPostSaveHook}
 
 parseRawSchema :: MonadError Error m => RawSchema -> m TemplateSchema
 parseRawSchema (RawSchema schema) = TemplateSchema <$> traverseSchema parseTemplate schema
 
 typeCheckTemplateSchema :: (MonadError Error m, MonadState Variables m) => TemplateSchema -> m ()
-typeCheckTemplateSchema (TemplateSchema schema) =
-  case schema of
-    File{..} -> do
-      case fileCreateCondition of
-        Nothing -> pure ()
-        Just name -> do
-          v <- lookupVariable name
-          case v of
-            VarBool _ -> pure ()
-            _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
-    Directory{..} -> do
-      case directoryCreateCondition of
-        Nothing -> pure ()
-        Just name -> do
-          v <- lookupVariable name
-          case v of
-            VarBool _ -> traverse_ typeCheckTemplateSchema $ coerce @_ @[TemplateSchema] directoryFiles
-            _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
+typeCheckTemplateSchema (TemplateSchema Schema{..}) = typeCheckFiles schemaFiles
+  where
+    typeCheckFiles fs =
+      case fs of
+        File{..} -> do
+          case fileCreateCondition of
+            Nothing -> pure ()
+            Just name -> do
+              v <- lookupVariable name
+              case v of
+                VarBool _ -> pure ()
+                _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
+        Directory{..} -> do
+          case directoryCreateCondition of
+            Nothing -> pure ()
+            Just name -> do
+              v <- lookupVariable name
+              case v of
+                VarBool _ -> traverse_ typeCheckFiles directoryFiles
+                _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
 
 renderTemplateSchema :: (MonadError Error m, MonadState Variables m) => TemplateSchema -> m RenderedSchema
 renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema renderTemplate schema
 
 saveRenderedSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadState Variables m) => RenderedSchema -> m ()
-saveRenderedSchema (RenderedSchem schema) = do
+saveRenderedSchema (RenderedSchem Schema{..}) = do
   out <- asks paramSaveLocation
   safeMakeDir out
-  go out schema
+  go out schemaFiles
+  runHooks schemaPostSaveHook
   where
     whenVar k a =
       case k of
@@ -119,7 +149,7 @@ saveRenderedSchema (RenderedSchem schema) = do
             VarBool True  -> a
             VarBool False -> pure ()
             _             -> throwError $ ErrorTypeCheck "Create condition must be bool"
-    go :: FilePath -> Schema Text -> m ()
+    go :: FilePath -> FilesSchema Text -> m ()
     go prefix f =
       case f of
         File{..} -> whenVar fileCreateCondition $ safeWriteFile (prefix </> T.unpack fileName) fileContent
@@ -127,14 +157,14 @@ saveRenderedSchema (RenderedSchem schema) = do
           safeMakeDir (prefix </> T.unpack directoryName)
           mapM_ (go (prefix </> T.unpack directoryName)) directoryFiles
 
-toList :: Monoid a => Schema a -> [(a,a)]
-toList File{..}      = [(fileName, fileContent)]
-toList Directory{..} = (directoryName, mempty) : concatMap toList directoryFiles
-
+-- TODO get variables from hooks
 schemaUsedVariables :: TemplateSchema -> [Text]
-schemaUsedVariables schema = mapMaybe getVariable $ concatMap getTemplateAst $ go schema
+schemaUsedVariables (TemplateSchema Schema{..}) = nub $ filesVars <> postSaveHookVars
   where
-    go (TemplateSchema s) = case s of
+    postSaveHookVars = catMaybes $ concatMap (fmap getVariable . getTemplateAst . hookCommand) schemaPostSaveHook
+    filesVars = mapMaybe getVariable $ concatMap getTemplateAst $ go schemaFiles
+    go :: FilesSchema Template -> [Template]
+    go s = case s of
       File{..} ->
         [ fileName
         , fileContent
@@ -143,7 +173,7 @@ schemaUsedVariables schema = mapMaybe getVariable $ concatMap getTemplateAst $ g
       Directory{..} ->
         [ directoryName
         , maybe (Template []) (Template . pure . TemplateVariable) directoryCreateCondition
-        ] <> concatMap (go . TemplateSchema) directoryFiles
+        ] <> concatMap go directoryFiles
     getVariable (TemplateVariable xs) = Just xs
     getVariable _                     = Nothing
 

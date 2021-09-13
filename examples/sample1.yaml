@@ -1,9 +1,13 @@
-directory: "."
+postSaveHook:
+  - name: "foo" # Optional
+    run: "git init"
 files:
-  - file: "foo.txt"
-    content: "I am author: {{ author }}"
-  - directory: "bar"
-    files:
-      - file: "bar.txt"
-        content: "I do not exist: {{ foobar }}"
-        condition: create_bar
+  directory: "."
+  files:
+    - file: "foo.txt"
+      content: "I am author: {{ author }}"
+      - directory: "bar"
+        files:
+          - file: "bar.txt"
+            content: "I do not exist: {{ foobar }}"
+            condition: create_bar

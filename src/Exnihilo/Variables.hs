@@ -17,11 +17,11 @@ import           Data.Scientific
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import qualified Data.Text.IO         as T
+import           Data.Time.Format
+import           Data.Time.LocalTime  (getZonedTime)
 import           GHC.IO.Handle        (hFlush)
 import           System.IO            (stdout)
 
-import           Data.Time.Format
-import           Data.Time.LocalTime  (getZonedTime)
 import           Exnihilo.Error
 import           Exnihilo.SafeIO
 

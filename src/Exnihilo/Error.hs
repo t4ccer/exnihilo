@@ -17,6 +17,8 @@ data Error
   | ErrorUrlFetch Text
   | ErrorUrlInvalid Text
   | ErrorTypeCheck Text
+  | ErrorCommandExitCode Text
+  | ErrorInvalidCommand Text
   | ErrorOther Text
   deriving (Show, Eq)
 
@@ -31,6 +33,8 @@ prettyError = \case
   ErrorUrlFetch e        -> mconcat ["[Error] Could not fetch schema from url: \"", e, "\""]
   ErrorTypeCheck e       -> mconcat ["[Error] Type checker error: ", e]
   ErrorUrlInvalid e      -> mconcat ["[Error] Invalid url: \"", e, "\""]
+  ErrorCommandExitCode e -> mconcat ["[Error] Hook exited with non-zero exit code: \"", e, "\""]
+  ErrorInvalidCommand e  -> mconcat ["[Error] Invalid hook command: \"", e, "\""]
 
 printError :: MonadIO m => Error -> m ()
 printError = liftIO . T.hPutStrLn stderr . prettyError
