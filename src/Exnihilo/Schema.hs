@@ -164,7 +164,6 @@ saveRenderedSchema (RenderedSchem Schema{..}) = do
           safeMakeDir (prefix </> T.unpack directoryName)
           mapM_ (go (prefix </> T.unpack directoryName)) directoryFiles
 
--- TODO get variables from hooks
 schemaUsedVariables :: TemplateSchema -> [Text]
 schemaUsedVariables (TemplateSchema Schema{..}) = filesVars <> postSaveHookVars <> preSaveHookVars
   where
