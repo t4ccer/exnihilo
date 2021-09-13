@@ -7,9 +7,9 @@ module Exnihilo.App where
 
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has
-import qualified Data.ByteString.Char8     as BS
-import qualified Data.Text                 as T
-import qualified Data.Text.IO              as T
+import qualified Data.ByteString.Char8             as BS
+import qualified Data.Text                         as T
+import qualified Data.Text.IO                      as T
 import           Network.HTTP.Client
 import           Network.HTTP.Req
 import           Network.HTTP.Types.Status
@@ -19,6 +19,7 @@ import           Control.Monad.State
 import           Exnihilo.Error
 import           Exnihilo.Parameters
 import           Exnihilo.Variables
+import           System.Directory.Internal.Prelude (exitFailure)
 
 newtype App a = App {getApp :: StateT Variables (ReaderT Parameters (ExceptT Error IO)) a}
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadError Error, MonadReader Parameters, MonadState Variables)
@@ -54,11 +55,13 @@ instance MonadHttp App where
           InvalidUrlException e' _ -> ErrorUrlInvalid $ T.pack e'
         JsonHttpException  e -> ErrorUrlFetch $ T.pack e
 
-runApp :: MonadIO m => Parameters -> Variables -> App () -> m ()
+runApp :: MonadIO m => Parameters -> Variables -> App a -> m a
 runApp params vars = printIfError . liftIO . runExceptT . flip runReaderT params . flip evalStateT vars . getApp
   where
     printIfError m = do
       res <- m
       case res of
         Right v -> pure v
-        Left e  -> liftIO $ T.hPutStrLn stderr $ prettyError e
+        Left e  -> do
+          liftIO $ T.hPutStrLn stderr $ prettyError e
+          liftIO exitFailure

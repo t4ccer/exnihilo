@@ -28,6 +28,7 @@ library
       Exnihilo.Env
       Exnihilo.Error
       Exnihilo.Hook
+      Exnihilo.Main
       Exnihilo.Parameters
       Exnihilo.SafeIO
       Exnihilo.Schema
