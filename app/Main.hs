@@ -19,7 +19,11 @@ import           Paths_exnihilo
 run :: (MonadIO m) => Parameters -> Variables -> m ()
 run params vars = runApp params vars $ do
   Parameters{..} <- ask
+
+  unless paramNoImplicitVariables addImplicitVariables
+  applyOverrides vars
   applyOverrides paramVariableOverrides
+
   rawSchema <- getRawSchema
   templateSchema <- parseRawSchema rawSchema
   tryGetMissingVariables templateSchema

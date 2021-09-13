@@ -32,6 +32,7 @@ dependencies:
 - http-types
 - modern-uri
 - scientific
+- time
 
 library:
   source-dirs: src

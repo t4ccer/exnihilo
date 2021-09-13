@@ -18,12 +18,13 @@ import qualified Data.Map             as M
 import           Exnihilo.Variables
 
 data Parameters = Parameters
-  { paramVariableFile      :: Maybe FilePath
-  , paramSchemaLocation    :: SchemaLocation
-  , paramSaveLocation      :: FilePath
-  , paramNoInteractive     :: Bool
-  , paramVariableOverrides :: Variables
-  , paramDryRun            :: Bool
+  { paramVariableFile        :: Maybe FilePath
+  , paramSchemaLocation      :: SchemaLocation
+  , paramSaveLocation        :: FilePath
+  , paramNoInteractive       :: Bool
+  , paramVariableOverrides   :: Variables
+  , paramDryRun              :: Bool
+  , paramNoImplicitVariables :: Bool
   }
  deriving (Show)
 
@@ -65,12 +66,13 @@ versionOpts = do
 
 createOpts :: Parser Mode
 createOpts = do
-  paramVariableFile      <- optional $ strOption (long "variables"   <> metavar "FILE" <> help "Path to file with variables")
-  paramSchemaLocation    <- schemaOption
-  paramSaveLocation      <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
-  paramNoInteractive     <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
-  paramVariableOverrides <- fromList <$> many varOpts
-  paramDryRun            <- flag False True  (long "dry-run" <> help "Do not create any files.")
+  paramVariableFile        <- optional $ strOption (long "variables"   <> metavar "FILE" <> help "Path to file with variables")
+  paramSchemaLocation      <- schemaOption
+  paramSaveLocation        <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
+  paramNoInteractive       <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
+  paramVariableOverrides   <- fromList <$> many varOpts
+  paramDryRun              <- flag False True  (long "dry-run" <> help "Do not create any files.")
+  paramNoImplicitVariables <- flag False True  (long "no-implicit" <> help "Do not add implicit variables, like current date, etc.")
   pure $ ModeCreate Parameters{..}
 
 varOpts :: Parser (Text, Variable)

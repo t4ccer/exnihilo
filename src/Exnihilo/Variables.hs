@@ -9,6 +9,7 @@ import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Aeson.Types
 import           Data.Bifunctor
+import           Data.Char            (toLower)
 import qualified Data.HashMap.Strict  as HM
 import           Data.Map             (Map)
 import qualified Data.Map             as M
@@ -19,7 +20,8 @@ import qualified Data.Text.IO         as T
 import           GHC.IO.Handle        (hFlush)
 import           System.IO            (stdout)
 
-import           Data.Char            (toLower)
+import           Data.Time.Format
+import           Data.Time.LocalTime  (getZonedTime)
 import           Exnihilo.Error
 import           Exnihilo.SafeIO
 
@@ -91,6 +93,24 @@ askForMissingVariables missing = do
 applyOverrides :: (MonadState Variables m) => Variables -> m ()
 applyOverrides vars =
   modify (Variables . M.union (getVariables vars) . getVariables)
+
+addImplicitVariables :: (MonadState Variables m, MonadIO m) => m ()
+addImplicitVariables = do
+  date <- liftIO getZonedTime
+  let fmt t = VarString $ T.pack $ formatTime defaultTimeLocale t date
+      var n v = (n, fmt v)
+  let vars = fromList
+        [ var "date-hour24"     "%H"
+        , var "date-hour12"     "%I"
+        , var "date-minute"     "%M"
+        , var "date-second"     "%S"
+        , var "date-ampm"       "%p" -- TODO: Maybe better name
+        , var "date-year"       "%Y"
+        , var "date-month"      "%m"
+        , var "date-month-name" "%B"
+        , var "date-day"        "%d"
+        ]
+  applyOverrides vars
 
 renderVariable :: Variable -> Text
 renderVariable (VarString s) = s

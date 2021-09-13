@@ -54,6 +54,7 @@ library
     , req
     , scientific
     , text
+    , time
     , transformers
     , unordered-containers
     , yaml
@@ -85,6 +86,7 @@ executable exnihilo
     , req
     , scientific
     , text
+    , time
     , transformers
     , unordered-containers
     , yaml
@@ -118,6 +120,7 @@ test-suite exnihilo-tests
     , req
     , scientific
     , text
+    , time
     , transformers
     , unordered-containers
     , yaml
