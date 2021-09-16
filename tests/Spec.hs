@@ -117,6 +117,24 @@ integrationLocalSpec = describe "Integration tests - local path" do
 
     res `shouldBe` Left (ErrorFileParse "tests/data/invalid.yaml" "Aeson exception: Error in $: key \"files\" not found")
 
+  it "With create condition" do
+    Main.debug
+      " -s tests/data/simple-condition.yaml\
+      \ -d tests/data/simple-condition.out\
+      \ --variables tests/data/vars.yaml\
+      \ --no-interactive"
+
+    check "simple-condition"
+
+  it "With create condition - wrong type" do
+    res <- Main.debugTry
+      " -s tests/data/simple-condition-wrong-type.yaml\
+      \ -d tests/data/whatever.out\
+      \ --variables tests/data/vars.yaml\
+      \ --no-interactive"
+
+    res `shouldBe` Left (ErrorCreateTypeCheck "")
+
   it "Dry run" do
     liftIO $ removePathForcibly "tests/data/dry-run.out"
     Main.debug

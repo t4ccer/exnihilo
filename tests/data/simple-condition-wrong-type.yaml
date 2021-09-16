@@ -1,0 +1,8 @@
+files:
+  directory: "."
+  files:
+    - file: "file1"
+      content: "1"
+      condition: "varInt1"
+    - file: "file2"
+      content: "2"
