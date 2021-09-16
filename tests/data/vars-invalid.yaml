@@ -1,0 +1,7 @@
+varString1: foo
+varString2: bar
+varInt1: 42
+varBool1: yes
+varBool2: no
+# Invalid
+varList: [] 

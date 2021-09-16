@@ -64,3 +64,4 @@ tests:
     dependencies:
     - exnihilo
     - hspec < 2.9
+    - directory-tree

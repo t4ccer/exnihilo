@@ -3,13 +3,24 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+
 module Main where
 
 import           Control.Monad.Except
+import           Control.Monad.Except.CoHas (runExceptT)
+import           Control.Monad.Reader
 import           Control.Monad.State
+import           System.Directory
+import           System.Directory.Tree
+import           System.Environment
+import           System.FilePath
 import           Test.Hspec
 
+import           Exnihilo.App
 import           Exnihilo.Error
+import qualified Exnihilo.Main              as Main
+import           Exnihilo.Parameters
+import           Exnihilo.Schema
 import           Exnihilo.Template
 import           Exnihilo.Variables
 
@@ -18,6 +29,92 @@ main = hspec spec
 
 spec = do
   templateSpec
+  integrationSpec
+
+integrationSpec = describe "Integration tests - local path" do
+  it "No templates" do
+    Main.debug
+      " -s tests/data/simple.yaml\
+      \ -d tests/data/simple.out\
+      \ --no-interactive"
+    check "simple"
+
+  it "With templates" do
+    Main.debug
+      " -s tests/data/simple-templates.yaml\
+      \ -d tests/data/simple-templates.out\
+      \ --variables tests/data/vars.yaml\
+      \ --no-interactive"
+
+    check "simple-templates"
+
+  it "With overrides" do
+    Main.debug
+      " -s tests/data/simple-overrides.yaml\
+      \ -d tests/data/simple-overrides.out\
+      \ --variables tests/data/vars.yaml\
+      \ -k varString1 -v bar\
+      \ --no-interactive"
+
+    check "simple-overrides"
+
+  it "Missing variables" do
+    res <-
+      Main.debugTry
+        " -s whatever\
+        \ -d whatever\
+        \ --variables tests/data/i-do-not-exist\
+        \ --no-interactive"
+
+    res `shouldBe` Left (ErrorFileReadMissing "tests/data/i-do-not-exist")
+
+  it "Invalid variables (list)" do
+    res <-
+      Main.debugTry
+        " -s wahtever\
+        \ -d whatever\
+        \ --variables tests/data/vars-invalid.yaml\
+        \ --no-interactive"
+
+    res `shouldBe`
+      Left (ErrorFileParse "tests/data/vars-invalid.yaml" "Aeson exception: Error in $: Variable can be only number, string, or bool. Variable \"varList\" is type of array.")
+
+  it "Missing schema" do
+    res <-
+      Main.debugTry
+        " -s tests/data/i-do-not-exist\
+        \ -d whatever\
+        \ --no-interactive"
+
+    res `shouldBe` Left (ErrorFileReadMissing "tests/data/i-do-not-exist")
+
+  it "Invalid schema (no files defined)" do
+    res <-
+      Main.debugTry
+        " -s tests/data/invalid.yaml\
+        \ -d whatever\
+        \ --no-interactive"
+
+    res `shouldBe` Left (ErrorFileParse "tests/data/invalid.yaml" "Aeson exception: Error in $: key \"files\" not found")
+
+  it "Dry run" do
+    liftIO $ removePathForcibly "tests/data/dry-run.out"
+    Main.debug
+      " -s tests/data/simple.yaml\
+      \ -d tests/data/dry-run.out\
+      \ --variables tests/data/vars.yaml\
+      \ --dry-run\
+      \ --no-interactive"
+    liftIO (doesDirectoryExist "tests/data/dry-run.out")
+      `shouldReturn` False
+
+  where
+    check fp = (fp <> ".out") `shouldMatch` (fp <> ".expected")
+    shouldMatch fp1 fp2 = do
+      res <- contents . dirTree <$> readDirectory ("tests/data" </> fp1)
+      exp <- contents . dirTree <$> readDirectory ("tests/data" </> fp2)
+      res `shouldBe` exp
+    getParams' inp = liftIO $ flip withArgs getParams $ words inp
 
 templateSpec = describe "Template engine" do
   it "Hadnles templates without variables" do
@@ -38,10 +135,9 @@ templateSpec = describe "Template engine" do
 
   it "Handles whitespaces around variables" do
     ("foo: {{  foo      }}", fromList [("foo", VarString "bar")]) `shouldRender` "foo: bar"
-
-    where
-      shouldRender (inp, vars) exp = testTemplate inp (pure exp) vars
-      shouldFailWith (inp, vars) e = testTemplate inp (throwError e) vars
-      testTemplate inp exp vars = do
-        out <- runExceptT $ evalStateT (parseTemplate inp >>= renderTemplate) vars
-        out `shouldBe` exp
+  where
+    shouldRender (inp, vars) exp = testTemplate inp (pure exp) vars
+    shouldFailWith (inp, vars) e = testTemplate inp (throwError e) vars
+    testTemplate inp exp vars = do
+      out <- runExceptT $ evalStateT (parseTemplate inp >>= renderTemplate) vars
+      out `shouldBe` exp

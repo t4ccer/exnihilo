@@ -2,4 +2,5 @@
 *~
 /.direnv/
 /result
-examples/out*
+/examples/out*
+/tests/data/*.out

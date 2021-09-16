@@ -1,0 +1,5 @@
+files:
+  directory: "."
+  files:
+    - file: "file1"
+      content: "1"
