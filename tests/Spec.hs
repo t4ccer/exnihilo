@@ -29,9 +29,29 @@ main = hspec spec
 
 spec = do
   templateSpec
-  integrationSpec
+  integrationLocalSpec
+  integrationUrlSpec
+  integrationGithubSpec
 
-integrationSpec = describe "Integration tests - local path" do
+integrationGithubSpec = describe "Integration tests - Github" do
+  it "Fetch schema" do
+    --
+    Main.debug
+      " -g t4ccer/exnihilo -s tests/data/simple.yaml --ref a6be66a3551635e60ef81e1c3b698990e1431ee9\
+      \ -d tests/data/simple-github.out\
+      \ --no-interactive"
+    check "simple-github"
+
+integrationUrlSpec = describe "Integration tests - URL" do
+  it "Fetch schema" do
+    -- a6be66a3551635e60ef81e1c3b698990e1431ee9
+    Main.debug
+      " -u https://raw.githubusercontent.com/t4ccer/exnihilo/a6be66a3551635e60ef81e1c3b698990e1431ee9/tests/data/simple.yaml\
+      \ -d tests/data/simple-url.out\
+      \ --no-interactive"
+    check "simple-url"
+
+integrationLocalSpec = describe "Integration tests - local path" do
   it "No templates" do
     Main.debug
       " -s tests/data/simple.yaml\
@@ -108,14 +128,6 @@ integrationSpec = describe "Integration tests - local path" do
     liftIO (doesDirectoryExist "tests/data/dry-run.out")
       `shouldReturn` False
 
-  where
-    check fp = (fp <> ".out") `shouldMatch` (fp <> ".expected")
-    shouldMatch fp1 fp2 = do
-      res <- contents . dirTree <$> readDirectory ("tests/data" </> fp1)
-      exp <- contents . dirTree <$> readDirectory ("tests/data" </> fp2)
-      res `shouldBe` exp
-    getParams' inp = liftIO $ flip withArgs getParams $ words inp
-
 templateSpec = describe "Template engine" do
   it "Hadnles templates without variables" do
     ("foo bar", mempty) `shouldRender` "foo bar"
@@ -141,3 +153,11 @@ templateSpec = describe "Template engine" do
     testTemplate inp exp vars = do
       out <- runExceptT $ evalStateT (parseTemplate inp >>= renderTemplate) vars
       out `shouldBe` exp
+
+check fp = (fp <> ".out") `shouldMatch` (fp <> ".expected")
+shouldMatch fp1 fp2 = do
+  res <- contents . dirTree <$> readDirectory ("tests/data" </> fp1)
+  exp <- contents . dirTree <$> readDirectory ("tests/data" </> fp2)
+  res `shouldBe` exp
+
+getParams' inp = liftIO $ flip withArgs getParams $ words inp
