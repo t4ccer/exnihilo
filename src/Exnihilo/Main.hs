@@ -15,12 +15,11 @@ import           Exnihilo.Schema
 import           Exnihilo.Variables
 import           Paths_exnihilo
 
-run :: (MonadIO m) => Parameters -> Variables -> m ()
-run params vars = runApp params vars $ do
+run :: App ()
+run = do
   Parameters{..} <- ask
 
   unless paramNoImplicitVariables addImplicitVariables
-  applyOverrides vars
   applyOverrides paramVariableOverrides
 
   rawSchema <- getRawSchema
@@ -50,7 +49,17 @@ main = do
   res <- runInit
   case res of
     Left e               -> printError e
-    Right (params, vars) -> run params vars
+    Right (params, vars) -> runApp params vars run
 
 debug :: String -> IO ()
 debug = flip withArgs main . words
+
+mainTry :: IO (Either Error ())
+mainTry = do
+  res <- runInit
+  case res of
+    Left e               -> pure $ Left e
+    Right (params, vars) -> tryRunApp params vars run
+
+debugTry :: String -> IO (Either Error ())
+debugTry = flip withArgs mainTry . words

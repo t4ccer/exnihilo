@@ -55,6 +55,9 @@ instance MonadHttp App where
           InvalidUrlException e' _ -> ErrorUrlInvalid $ T.pack e'
         JsonHttpException  e -> ErrorUrlFetch $ T.pack e
 
+tryRunApp :: MonadIO m => Parameters -> Variables -> App a -> m (Either Error a)
+tryRunApp params vars = liftIO . runExceptT . flip runReaderT params . flip evalStateT vars . getApp
+
 runApp :: MonadIO m => Parameters -> Variables -> App a -> m a
 runApp params vars = printIfError . liftIO . runExceptT . flip runReaderT params . flip evalStateT vars . getApp
   where
