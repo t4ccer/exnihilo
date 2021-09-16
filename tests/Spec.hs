@@ -174,8 +174,15 @@ templateSpec = describe "Template engine" do
 
 check fp = (fp <> ".out") `shouldMatch` (fp <> ".expected")
 shouldMatch fp1 fp2 = do
-  res <- contents . dirTree <$> readDirectory ("tests/data" </> fp1)
-  exp <- contents . dirTree <$> readDirectory ("tests/data" </> fp2)
-  res `shouldBe` exp
+  f1 <- dirTree <$> readDirectory ("tests/data" </> fp1)
+  f2 <- dirTree <$> readDirectory ("tests/data" </> fp2)
+  case f1 of
+    d1@Dir{} -> case f2 of
+      d2@Dir{} -> contents d1 `shouldBe` contents d2
+      _        -> f1 `shouldBe` f2
+    _ -> f1 `shouldBe` f2
+  -- res <- contents . dirTree <$> readDirectory ("tests/data" </> fp1)
+  -- exp <- contents . dirTree <$> readDirectory ("tests/data" </> fp2)
+  -- res `shouldBe` exp
 
 getParams' inp = liftIO $ flip withArgs getParams $ words inp
