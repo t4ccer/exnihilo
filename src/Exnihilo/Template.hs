@@ -33,7 +33,7 @@ data TemplateAst
   deriving (Show, Eq)
 
 parseTemplate :: MonadError Error m => Text -> m Template
-parseTemplate = maybe (throwError $ ErrorTemplateParse "") pure . parseMaybe templateP
+parseTemplate = maybe (throwError $ ErrorTemplateParse "Unreachable") pure . parseMaybe templateP
 
 renderTemplate :: forall m. (MonadState Variables m, MonadError Error m) => Template -> m Text
 renderTemplate templ = do

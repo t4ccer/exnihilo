@@ -41,7 +41,7 @@ instance FromJSON Variables where
         wrongEntry = bimap T.unpack getType $ head $ filter (not . isText . snd) yamlDict
     if all (isText . snd) yamlDict
       then pure $ Variables $ M.fromList strLst
-      else parseFail ("Variable can be only number,string, or bool. Variable \"" <> fst wrongEntry <> "\" is type of " <> snd wrongEntry <> ".")
+      else parseFail ("Variable can be only number, string, or bool. Variable \"" <> fst wrongEntry <> "\" is type of " <> snd wrongEntry <> ".")
     where
       isText (String _) = True
       isText (Number _) = True

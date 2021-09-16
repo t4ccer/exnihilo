@@ -32,7 +32,7 @@ safeReadFile fp  = do
         Right v -> Right v
         Left e  -> Left $ handler e
     handler e
-      | isDoesNotExistError e = ErrorFileReadMissing $ mconcat ["Cannot read file \"", T.pack fp, "\". File does not exist."]
+      | isDoesNotExistError e = ErrorFileReadMissing $ T.pack fp
       | isAlreadyInUseError e = ErrorFileRead        $ mconcat ["Cannot read file \"", T.pack fp, "\". File is already in use."]
       | isPermissionError   e = ErrorFileRead        $ mconcat ["Cannot read file \"", T.pack fp, "\". Permission denied."]
       | otherwise             = ErrorOther           $ mconcat ["Unknown error while reading file \"", T.pack fp, "\"."]
@@ -79,11 +79,15 @@ prettyYamlError :: Data.Yaml.ParseException -> Text
 prettyYamlError e = T.pack ((\c -> if c == '\n' then ' ' else c) <$> prettyPrintParseException e)
 
 safeDecodeYamlFile :: (FromJSON a, MonadIO m, MonadError Error m) => FilePath -> m a
-safeDecodeYamlFile fp = safeReadFile fp >>= safeDecodeYaml
+safeDecodeYamlFile fp = safeReadFile fp >>= go
+  where
+    go yaml = case decodeEither' (BS.pack $ T.unpack yaml) of
+      Left e  -> throwError $ ErrorFileParse (T.pack fp) $ prettyYamlError e
+      Right v -> pure v
 
 safeDecodeYaml :: (FromJSON a, MonadError Error m) => Text -> m a
 safeDecodeYaml yaml = case decodeEither' (BS.pack $ T.unpack yaml) of
-  Left e  -> throwError $ ErrorFileRead $ prettyYamlError e
+  Left e  -> throwError $ ErrorVariableParse $ prettyYamlError e
   Right v -> pure v
 
 safeGetUrl :: (Monad m, MonadError Error m, MonadHttp m) => Text -> m Text

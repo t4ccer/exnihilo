@@ -126,7 +126,7 @@ typeCheckTemplateSchema (TemplateSchema Schema{..}) = typeCheckFiles schemaFiles
               v <- lookupVariable name
               case v of
                 VarBool _ -> pure ()
-                _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
+                _         -> throwError $ ErrorCreateTypeCheck ""
         Directory{..} -> do
           case directoryCreateCondition of
             Nothing -> pure ()
@@ -134,7 +134,7 @@ typeCheckTemplateSchema (TemplateSchema Schema{..}) = typeCheckFiles schemaFiles
               v <- lookupVariable name
               case v of
                 VarBool _ -> traverse_ typeCheckFiles directoryFiles
-                _         -> throwError $ ErrorTypeCheck "Create condition must be bool"
+                _         -> throwError $ ErrorCreateTypeCheck ""
 
 renderTemplateSchema :: (MonadError Error m, MonadState Variables m) => TemplateSchema -> m RenderedSchema
 renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema renderTemplate schema
@@ -155,7 +155,7 @@ saveRenderedSchema (RenderedSchem Schema{..}) = do
           case v of
             VarBool True  -> a
             VarBool False -> pure ()
-            _             -> throwError $ ErrorTypeCheck "Create condition must be bool"
+            _             -> throwError $ ErrorCreateTypeCheck ""
     go :: FilePath -> FilesSchema Text -> m ()
     go prefix f =
       case f of

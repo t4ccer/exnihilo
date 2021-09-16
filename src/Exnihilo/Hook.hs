@@ -48,5 +48,5 @@ runHook Hook{..} = do
         ExitSuccess   -> case hookBind of
           Nothing -> pure ()
           Just k  -> parseVariable k (T.pack out) >>= applyOverrides
-        ExitFailure _ -> throwError $ ErrorCommandExitCode $ T.pack err -- TODO add error type
+        ExitFailure _ -> throwError $ ErrorCommandExitCode $ T.pack err
     _ -> throwError $ ErrorInvalidCommand hookCommand
