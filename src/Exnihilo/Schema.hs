@@ -191,12 +191,14 @@ schemaMissingVariables schema = do
   let usedNames = S.fromList $ schemaUsedVariables schema
   pure $ S.toList $ S.difference usedNames declaredNames
 
-tryGetMissingVariables :: (MonadIO m, MonadState Variables m, MonadReader Parameters m, MonadError Error m) => TemplateSchema -> m ()
-tryGetMissingVariables schema = do
+handleMissingVariables :: (MonadIO m, MonadState Variables m, MonadReader Parameters m, MonadError Error m) => TemplateSchema -> m ()
+handleMissingVariables schema = do
   Parameters{..} <- ask
-  unless paramNoInteractive $ do
-    missing <- schemaMissingVariables schema
-    askForMissingVariables missing
+  missing <- schemaMissingVariables schema
+  unless (null missing) $
+    if paramNoInteractive
+      then throwError $ ErrorMissingVariable $ T.intercalate ", " missing
+      else getMissingVariables getMissingVariableInteractive missing
 
 getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m) => m RawSchema
 getRawSchema = do

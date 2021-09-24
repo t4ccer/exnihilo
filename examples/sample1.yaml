@@ -6,8 +6,8 @@ files:
   files:
     - file: "foo.txt"
       content: "I am author: {{ author }}"
-      - directory: "bar"
-        files:
-          - file: "bar.txt"
-            content: "I do not exist: {{ foobar }}"
-            condition: create_bar
+    - directory: "bar"
+      files:
+        - file: "bar.txt"
+          content: "I do not exist: {{ foobar }}"
+          condition: create_bar

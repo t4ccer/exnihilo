@@ -22,6 +22,7 @@ import           Data.Time.LocalTime  (getZonedTime)
 import           GHC.IO.Handle        (hFlush)
 import           System.IO            (stdout)
 
+import           Data.Foldable        (traverse_)
 import           Exnihilo.Error
 import           Exnihilo.SafeIO
 
@@ -71,24 +72,19 @@ lookupVariable key = do
 parseVariable :: (MonadError Error m) => Text -> Text -> m Variables
 parseVariable k v = safeDecodeYaml $ k  <>  ": " <> v
 
-askForVariable :: (MonadIO m, MonadState Variables m, MonadError Error m) => Text -> m ()
-askForVariable missing =  do
+getMissingVariableInteractive :: (MonadIO m, MonadState Variables m, MonadError Error m) => Text -> m Variables
+getMissingVariableInteractive missing =  do
   value <- liftIO $ do
     T.putStrLn $ "Variable '" <> missing <> "' not defined in variables file. Provide value for missing variable."
     T.putStr $ missing <> ": "
     hFlush stdout
     T.getLine
-  (Variables var1) <- parseVariable missing value
-  (Variables var2) <- get
-  put $ Variables $ M.union var1 var2
+  parseVariable missing value
 
-askForMissingVariables :: forall m. (MonadIO m, MonadState Variables m, MonadError Error m) => [Text] -> m ()
-askForMissingVariables missing = do
-  new <- execStateT (go missing) mempty
-  applyOverrides new
-  where
-    go []     = pure ()
-    go (x:xs) = askForVariable x >> go xs
+getMissingVariables :: (MonadIO m, MonadState Variables m, MonadError Error m) => (Text -> m Variables) -> [Text] -> m ()
+getMissingVariables f missing = do
+  vars <- traverse f missing
+  traverse_ applyOverrides vars
 
 applyOverrides :: (MonadState Variables m) => Variables -> m ()
 applyOverrides vars =

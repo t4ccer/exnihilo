@@ -24,7 +24,7 @@ run = do
 
   rawSchema <- getRawSchema
   templateSchema <- parseRawSchema rawSchema
-  tryGetMissingVariables templateSchema
+  handleMissingVariables templateSchema
   typeCheckTemplateSchema templateSchema
   renderedSchema <- renderTemplateSchema templateSchema
   unless paramDryRun $ saveRenderedSchema renderedSchema
