@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
-module Exnihilo.Hook where
+module Exnihilo.Hook(Hook(..), runHooks) where
 
 import           Control.Monad.Except
 import           Control.Monad.Reader

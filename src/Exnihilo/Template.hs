@@ -3,9 +3,11 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
--- {-# OPTIONS_GHC -Wno-deferred-type-errors #-}
 
-module Exnihilo.Template where
+module Exnihilo.Template
+  (Template(..), TemplateAst(..)
+  , parseTemplate, renderTemplate
+  ) where
 
 import           Control.Monad.Except
 import           Data.Text            (Text)

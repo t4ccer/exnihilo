@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Exnihilo.Error where
+module Exnihilo.Error(Error(..), prettyError, printError) where
 
 import           Control.Monad.Except
 import           Data.Text            (Text)

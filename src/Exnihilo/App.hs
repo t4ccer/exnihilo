@@ -3,7 +3,7 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module Exnihilo.App where
+module Exnihilo.App(App, runApp, tryRunApp) where
 
 import           Control.Monad.Except
 import           Control.Monad.Reader.Has

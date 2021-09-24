@@ -25,7 +25,6 @@ source-repository head
 library
   exposed-modules:
       Exnihilo.App
-      Exnihilo.Env
       Exnihilo.Error
       Exnihilo.Hook
       Exnihilo.Main

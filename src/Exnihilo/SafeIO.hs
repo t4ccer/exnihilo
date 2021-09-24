@@ -2,7 +2,12 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Exnihilo.SafeIO where
+module Exnihilo.SafeIO
+  ( safeReadFile, safeWriteFile
+  , safeDecodeYaml, safeDecodeYamlFile
+  , safeMakeDir
+  , safeGetUrl
+  ) where
 
 import           Control.Exception     (try)
 import           Control.Monad.Except

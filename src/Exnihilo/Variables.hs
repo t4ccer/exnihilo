@@ -3,7 +3,12 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-module Exnihilo.Variables where
+module Exnihilo.Variables
+  ( Variable(..)
+  , Variables(..)
+  , renderVariable, fromList, lookupVariable, parseVariable
+  , getMissingVariables, getMissingVariableInteractive, applyOverrides, addImplicitVariables
+  ) where
 
 import           Control.Monad.Except
 import           Control.Monad.State

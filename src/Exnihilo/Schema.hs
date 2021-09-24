@@ -9,7 +9,12 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-module Exnihilo.Schema where
+module Exnihilo.Schema
+  ( Schema(..), RawSchema, TemplateSchema, RenderedSchema
+  , FilesSchema(..)
+  , getRawSchema, parseRawSchema, typeCheckTemplateSchema
+  , renderTemplateSchema, saveRenderedSchema, handleMissingVariables
+  ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
@@ -63,7 +68,7 @@ data FilesSchema a
 newtype RawSchema = RawSchema (Schema Text)
   deriving newtype FromJSON
 
-newtype TemplateSchema = TemplateSchema {getTemplateSchema :: Schema Template}
+newtype TemplateSchema = TemplateSchema (Schema Template)
 
 newtype RenderedSchema = RenderedSchem (Schema Text)
 

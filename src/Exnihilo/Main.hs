@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Exnihilo.Main where
+module Exnihilo.Main(main, mainTry, debug, debugTry) where
 
 import           Control.Monad.Except
 import           Control.Monad.Reader
