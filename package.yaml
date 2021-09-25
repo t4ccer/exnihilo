@@ -7,7 +7,7 @@ maintainer:          "t4ccre@gmail.com"
 copyright:           "t4ccer"
 
 extra-source-files:
-- README.md
+- README.org
 
 description:         Please see the README on GitHub at <https://github.com/t4ccer/exnihilo#readme>
 

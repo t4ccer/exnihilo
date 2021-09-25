@@ -1,0 +1,105 @@
+
+
+* =exnihilo=
+
+=exnihilo= is language agnostic project bootstraper. It allows to to create new project files and directory structure from single schema file.
+
+* Instalation
+
+** Build from source
+
+=exnihilo= is not available via any package manager yet, but can be simply built from source.
+
+#+begin_src bash
+  git clone https://github.com/t4ccer/exnihilo
+  cd exnihilo
+  stack install
+#+end_src
+
+* Usage
+
+#+begin_src bash
+  
+  Usage: exnihilo [[--version] [--numeric] | [--variables FILE]
+                  ((-s|--schema PATH) | (-u|--url URL) | (-g|--github REPO)
+                    [--ref REF] (-s|--schema PATH)) (-d|--destination PATH)
+                  [--no-interactive] [(-k|--key KEY) (-v|--value VAL)]
+                  [--dry-run] [--no-implicit]]
+  
+  Available options:
+    -h,--help                Show this help text
+    --version                Print version
+    --numeric                Print only version number
+    --variables FILE         Path to file with variables
+    -s,--schema PATH         Path to schema file
+    -u,--url URL             Url to schema file
+    -g,--github REPO         format: user/repo
+    --ref REF                Branch or tag. Default: main
+    -s,--schema PATH         Path to schema file
+    -d,--destination PATH    Path to new project
+    --no-interactive         Disable interactions. Return with error on missing
+                             variable instead of asking
+    -k,--key KEY             Variable name to overrite
+    -v,--value VAL           Variable value to overrite
+    --dry-run                Do not create any files.
+    --no-implicit            Do not add implicit variables, like current date,
+                           etc.
+                           
+#+end_src
+
+* Examples
+
+** Simple file template
+
+#+begin_src yaml
+  # simple.yaml
+  postSaveHook:
+  files:
+    directory: "."
+    files:
+      - file: "my-file.txt"
+        content: "Hi, I am {{ author }}, and this is my file"
+#+end_src
+
+#+begin_src bash
+  
+  exnihilo -s /path/to/simple.yaml -d /path/to/destination
+  
+#+end_src
+
+** Haskell stack project
+
+#+begin_src bash
+  
+  exnihilo -g t4ccer/exnihilo -s /examples/haskell-stack -d /path/to/destination
+  
+#+end_src
+
+* Schemas
+
+Schemas are used to define project template. =exnihilo= can get schema files from local path, url, or github repo.
+
+* Templates
+
+Templating engine is really simple for now, it allows only to insert variable. Syntax: ={{ varaible-name }}=.
+
+* Variables
+
+Variables can be read from yaml file with variables, from CLI parameters, and from user terminal input.
+
+* Hooks
+
+Schema supports pre and post-save hooks. Hooks are shell commands that are run sequencially. Hooks can contain templates, and stdout from hook can be binded to another varible.
+
+** Examples
+
+#+begin_src yaml
+  
+  preSaveHook:
+  - name: "Get stack resolver"
+    run: "wget -O/dev/null https://www.stackage.org/nightly 2>&1 | grep following | awk '{print $2}' | cut -c2-"
+    bind: "resolver"
+  
+#+end_src
+
+This hook, before rendering other templates, will get newest nightly stack resolver, and save it to variable =resolver=.
