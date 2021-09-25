@@ -146,7 +146,7 @@ renderTemplateSchema (TemplateSchema schema) = RenderedSchem <$> traverseSchema 
 
 saveRenderedSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadState Variables m) => RenderedSchema -> m ()
 saveRenderedSchema (RenderedSchem Schema{..}) = do
-  runHooks schemaPreSaveHook
+
   out <- asks paramSaveLocation
   safeMakeDir out
   go out schemaFiles
@@ -205,22 +205,26 @@ handleMissingVariables schema = do
       then throwError $ ErrorMissingVariable $ T.intercalate ", " missing
       else getMissingVariables getMissingVariableInteractive missing
 
-getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m) => m RawSchema
+getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m, MonadState Variables m) => m RawSchema
 getRawSchema = do
-  schemaLoc <- asks paramSchemaLocation
-  case schemaLoc of
-    SchemaLocationPath {..} ->
-      tryGetSchema  safeDecodeYamlFile (T.pack schemaLocationPath) schemaLocationPath
-    SchemaLocationUrl  {..} ->
-      tryGetSchema (safeDecodeYaml <=< safeGetUrl) schemaLocationUrl schemaLocationUrl
-    SchemaLocationGithub {..} -> do
-      let url
-            =  "https://raw.githubusercontent.com/"
-                   <> schemaLocationGithubRepo
-            <> "/" <> schemaLocationGithubRef
-            <> "/" <> schemaLocationGithubPath
-      tryGetSchema (safeDecodeYaml <=< safeGetUrl) url url
+  schema <- getSchema
+  runHooks $ schemaPreSaveHook schema
+  pure $ RawSchema schema
     where
+      getSchema = do
+        schemaLoc <- asks paramSchemaLocation
+        case schemaLoc of
+          SchemaLocationPath {..} ->
+            tryGetSchema  safeDecodeYamlFile (T.pack schemaLocationPath) schemaLocationPath
+          SchemaLocationUrl  {..} ->
+            tryGetSchema (safeDecodeYaml <=< safeGetUrl) schemaLocationUrl schemaLocationUrl
+          SchemaLocationGithub {..} -> do
+            let url
+                  = "https://raw.githubusercontent.com/"
+                         <> schemaLocationGithubRepo
+                  <> "/" <> schemaLocationGithubRef
+                  <> "/" <> schemaLocationGithubPath
+            tryGetSchema (safeDecodeYaml <=< safeGetUrl) url url
       tryGetSchema f fp x = firstSuccess f fp (possiblePaths x)
       possiblePaths xs =
         [ xs

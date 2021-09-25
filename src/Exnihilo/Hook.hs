@@ -12,8 +12,8 @@ import           Data.Foldable        (traverse_)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Data.Yaml
-import           System.Command       hiding (cmd)
 import           System.Exit
+import           System.Process
 
 import           Exnihilo.Error
 import           Exnihilo.Parameters
@@ -37,16 +37,12 @@ instance FromJSON (Hook Text) where
 runHooks :: (MonadError Error m, MonadIO m, MonadState Variables m, MonadReader Parameters m) => [Hook Text] -> m ()
 runHooks = traverse_ runHook
 
--- TODO validate hook command
 runHook :: (MonadError Error m, MonadIO m, MonadState Variables m, MonadReader Parameters m) => Hook Text -> m ()
 runHook Hook{..} = do
-  case words $ T.unpack hookCommand of
-    (cmd:args) -> do
-      Parameters{..} <- ask
-      (Exit c, Stdout out, Stderr err) <- liftIO $ command [Cwd paramSaveLocation] cmd args
-      case c of
-        ExitSuccess   -> case hookBind of
-          Nothing -> pure ()
-          Just k  -> parseVariable k (T.pack out) >>= applyOverrides
-        ExitFailure _ -> throwError $ ErrorCommandExitCode $ T.pack err
-    _ -> throwError $ ErrorInvalidCommand hookCommand
+  (code, out, err) <- liftIO $ flip readCreateProcessWithExitCode "" $ shell $ T.unpack hookCommand
+  case code of
+    ExitSuccess   -> case hookBind of
+      Nothing -> pure ()
+      Just k  -> parseVariable k (T.pack out) >>= applyOverrides
+    ExitFailure _ -> throwError $ ErrorCommandExitCode $ T.pack err
+

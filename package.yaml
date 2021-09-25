@@ -33,7 +33,7 @@ dependencies:
 - modern-uri
 - scientific
 - time
-- command
+- process
 
 library:
   source-dirs: src
