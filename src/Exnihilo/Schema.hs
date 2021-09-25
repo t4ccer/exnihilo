@@ -237,6 +237,8 @@ getRawSchema = do
         , xs <> "/.exnihilo.yml"
         ]
       firstSuccess _ fp [] = throwError $ ErrorFileReadMissing fp
-      firstSuccess f fp (x:xs) = f x `catchError` (\e -> case e of
-                                                   ErrorFileReadMissing _ -> firstSuccess f fp xs
-                                                   _                      -> throwError e)
+      firstSuccess f fp (x:xs) =
+        f x `catchError` (\e -> case e of
+                                  ErrorFileReadMissing _               -> firstSuccess f fp xs
+                                  ErrorUrlFetch "Status code: \"404\"" -> firstSuccess f fp xs
+                                  _                                    -> throwError e)
