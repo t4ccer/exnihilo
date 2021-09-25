@@ -13,6 +13,7 @@
 #+begin_src bash
   git clone https://github.com/t4ccer/exnihilo
   cd exnihilo
+  git checkout v0.1.0
   stack install
 #+end_src
 
