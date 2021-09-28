@@ -14,6 +14,7 @@ module Exnihilo.Schema
   , FilesSchema(..)
   , getRawSchema, parseRawSchema, typeCheckTemplateSchema
   , renderTemplateSchema, saveRenderedSchema, handleMissingVariables
+  , runPreSaveHooks
   ) where
 
 import           Control.Applicative
@@ -207,9 +208,7 @@ handleMissingVariables schema = do
 
 getRawSchema :: forall m. (MonadIO m, MonadReader Parameters m, MonadError Error m, MonadHttp m, MonadState Variables m) => m RawSchema
 getRawSchema = do
-  schema <- getSchema
-  runHooks $ schemaPreSaveHook schema
-  pure $ RawSchema schema
+  RawSchema <$> getSchema
     where
       getSchema = do
         schemaLoc <- asks paramSchemaLocation
@@ -242,3 +241,8 @@ getRawSchema = do
                                   ErrorFileReadMissing _               -> firstSuccess f fp xs
                                   ErrorUrlFetch "Status code: \"404\"" -> firstSuccess f fp xs
                                   _                                    -> throwError e)
+
+runPreSaveHooks :: (MonadIO m, MonadError Error m, MonadState Variables m, MonadReader Parameters m) => RawSchema -> m ()
+runPreSaveHooks (RawSchema schema) = do
+  asks paramSaveLocation >>= safeMakeDir
+  runHooks $ schemaPreSaveHook schema

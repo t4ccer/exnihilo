@@ -39,7 +39,8 @@ runHooks = traverse_ runHook
 
 runHook :: (MonadError Error m, MonadIO m, MonadState Variables m, MonadReader Parameters m) => Hook Text -> m ()
 runHook Hook{..} = do
-  (code, out, err) <- liftIO $ flip readCreateProcessWithExitCode "" $ shell $ T.unpack hookCommand
+  Parameters{..} <- ask
+  (code, out, err) <- liftIO $ flip readCreateProcessWithExitCode "" $ (shell $ T.unpack hookCommand) {cwd = Just paramSaveLocation}
   case code of
     ExitSuccess   -> case hookBind of
       Nothing -> pure ()

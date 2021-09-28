@@ -23,6 +23,7 @@ run = do
   applyOverrides paramVariableOverrides
 
   rawSchema <- getRawSchema
+  runPreSaveHooks rawSchema
   templateSchema <- parseRawSchema rawSchema
   handleMissingVariables templateSchema
   typeCheckTemplateSchema templateSchema
