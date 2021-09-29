@@ -23,7 +23,6 @@ data Parameters = Parameters
   , paramSaveLocation        :: FilePath
   , paramNoInteractive       :: Bool
   , paramVariableOverrides   :: Variables
-  , paramDryRun              :: Bool
   , paramNoImplicitVariables :: Bool
   }
  deriving (Show)
@@ -71,7 +70,6 @@ createOpts = do
   paramSaveLocation        <- strOption (short 'd' <> long "destination" <> metavar "PATH" <> help "Path to new project")
   paramNoInteractive       <- flag False True (long "no-interactive" <> help "Disable interactions. Return with error on missing variable instead of asking")
   paramVariableOverrides   <- fromList <$> many varOpts
-  paramDryRun              <- flag False True  (long "dry-run" <> help "Do not create any files.")
   paramNoImplicitVariables <- flag False True  (long "no-implicit" <> help "Do not add implicit variables, like current date, etc.")
   pure $ ModeCreate Parameters{..}
 

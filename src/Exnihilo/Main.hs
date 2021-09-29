@@ -28,7 +28,7 @@ run = do
   handleMissingVariables templateSchema
   typeCheckTemplateSchema templateSchema
   renderedSchema <- renderTemplateSchema templateSchema
-  unless paramDryRun $ saveRenderedSchema renderedSchema
+  saveRenderedSchema renderedSchema
 
 runInit :: (MonadIO m) => m (Either Error (Parameters, Variables))
 runInit = runExceptT $ do

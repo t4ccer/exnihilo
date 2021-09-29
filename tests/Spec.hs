@@ -135,17 +135,6 @@ integrationLocalSpec = describe "Integration tests - local path" do
 
     res `shouldBe` Left (ErrorCreateTypeCheck "")
 
-  it "Dry run" do
-    liftIO $ removePathForcibly "tests/data/dry-run.out"
-    Main.debug
-      " -s tests/data/simple.yaml\
-      \ -d tests/data/dry-run.out\
-      \ --variables tests/data/vars.yaml\
-      \ --dry-run\
-      \ --no-interactive"
-    liftIO (doesDirectoryExist "tests/data/dry-run.out")
-      `shouldReturn` False
-
 templateSpec = describe "Template engine" do
   it "Hadnles templates without variables" do
     ("foo bar", mempty) `shouldRender` "foo bar"
