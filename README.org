@@ -13,7 +13,7 @@
 #+begin_src bash
   git clone https://github.com/t4ccer/exnihilo
   cd exnihilo
-  git checkout v0.1.0
+  git checkout v0.1.1
   stack install
 #+end_src
 
@@ -25,7 +25,7 @@
                   ((-s|--schema PATH) | (-u|--url URL) | (-g|--github REPO)
                     [--ref REF] (-s|--schema PATH)) (-d|--destination PATH)
                   [--no-interactive] [(-k|--key KEY) (-v|--value VAL)]
-                  [--dry-run] [--no-implicit]]
+                  [--no-implicit]]
   
   Available options:
     -h,--help                Show this help text
@@ -42,7 +42,6 @@
                              variable instead of asking
     -k,--key KEY             Variable name to overrite
     -v,--value VAL           Variable value to overrite
-    --dry-run                Do not create any files.
     --no-implicit            Do not add implicit variables, like current date,
                            etc.
                            
